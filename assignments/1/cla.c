@@ -21,8 +21,8 @@ typedef struct binaryNumber binaryNumber;
 //Struct to contain the binary number nicely:
 struct binaryNumber{
 	char name;
-	char hex[n/4];
-  int data[n];
+	char hex[n/4 + 1];
+  int data[n + 1];
 };
 
 //xor function implementation:
@@ -62,10 +62,10 @@ void printBinary(binaryNumber* A){
 
 //Prints the hex number in a nice format
 void printHex(binaryNumber* A){
-	printf("%c (hex): ", A->name);
+	printf("Hex:\n");
 
 	for(int i = 0; i < n/4; ++i){
-		printf("%02x", A->hex[n/4 - 1 - i]);
+		printf("%c", A->hex[n/4 - 1 - i]);
 	}
 	printf("\n");
 
@@ -75,11 +75,16 @@ void printHex(binaryNumber* A){
 void makeHex(binaryNumber* A){
 	int index = 0;
 	int mult = 1;
+	int binValue;
 	char value[5];
 	for(int i = 0; i < n/4; ++i){
-		memcpy(value, &(A->data[i * 4]), 4);
-		value[4] = '\0';
-		printf("%d|", strtol(&value[0], NULL, 2));
+		binValue = 0;
+		mult = 1;
+		for(int j = 0; j < 4; ++j){
+			binValue += mult * A->data[i * 4 + j];
+			mult *= 2;
+		}
+		sprintf(&(A->hex[i]), "%X", binValue);
 	}
 }
 
@@ -297,25 +302,21 @@ int main(int argc, char* argv[]){
 	binaryNumber S;
 
 	getInputs(&A, &B);
+	printf("============INPUTS=============\n");
 	printAndTranslateInputs(&A, &B);
 
-	// initBinary(&A, hA, 'A');
-	// initBinary(&B, hB, 'B');
-	// initBinary(&S, 0, 'S');
-
-	//sumRipple(&A, &B, &S);
 	printf("\n\n");
+	printf("============OUTPUTS=============\n");
 	sumCLA(&A, &B, &S);
-	printOutput(&S);
-	sumRipple(&A, &B, &S);
-	printOutput(&S);
 	
-	// printBinary(&A);
-	// printBinary(&B);
-	// printBinary(&S);
+	//Uncomment for debugging:
+	// printOutput(&S);
+	// sumRipple(&A, &B, &S);
+	// printOutput(&S);
+	// printf("\n");
 
 	makeHex(&S);
-	//printHex(&S);
+	printHex(&S);
 
 
 
