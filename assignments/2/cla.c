@@ -134,7 +134,7 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 
 	//TODO: get carry input from other MPI file
 	//CALLOC REQUIRED ARRAYS IN FOR LOOP:
-	int reqBlocks = (int)log(n/numFiles)/log(blockSize);
+	int reqBlocks = (int)log(n/numFiles)/log(blockSize) + 1;
 	p = calloc(reqBlocks, sizeof(int*));
 	g = calloc(reqBlocks, sizeof(int*));
 
@@ -151,6 +151,20 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	debugBinary(g[0], n/numFiles, 'G');
 	debugBinary(p[0], n/numFiles, 'P');
 
+	//Calculate all group generates and group propogates:
+	for(int i = 1; i <= reqBlocks; ++i){
+		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i); ++j){
+			printf("%d|", j);
+		}
+		printf("\n");
+	}
+
+
+
+	//Collapse all group generates and group propogates:
+
+
+	//Compute sum:
 	// //Calculate all GG[j] PG[j];
 	// int PG[n/blockSize] = {0};
 	// int GG[n/blockSize] = {0};
