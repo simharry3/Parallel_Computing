@@ -127,6 +127,8 @@ void debugBinary(int* num, int len, char name){
 void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	int** p;
 	int** g;
+	int** c;
+	int** s;
 	//TODO: Convert to run with block size 8 and 262144 bits.
 	//TODO: Convert to use only loops.
 	printf("Carry Lookahead Sum, CS:\n");
@@ -137,12 +139,14 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	int reqBlocks = (int)log(n/numFiles)/log(blockSize) + 1;
 	p = calloc(reqBlocks, sizeof(int*));
 	g = calloc(reqBlocks, sizeof(int*));
+	c = calloc(reqBlocks, sizeof(int*));
 
 	printf("REQUIRED BLOCKS FOR CALCULATION: %d\n", reqBlocks + 1);
 	for(int i = 0; i <= reqBlocks; ++i){
 		printf("CALLOC SIZE %d\n", (int)pow(blockSize, reqBlocks - i));
 		p[i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
 		g[i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
+		c[reqBlocks - i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
 	}
 	for(int i = 0; i < n/numFiles; ++i){
 		p[0][i] = A->data[i] | B->data[i];
@@ -152,16 +156,39 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	debugBinary(p[0], n/numFiles, 'P');
 
 	//Calculate all group generates and group propogates:
-	for(int i = 1; i <= reqBlocks; ++i){
+	for(int i = 1; i < reqBlocks; ++i){
 		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i); ++j){
-			printf("%d|", j);
+			//printf("%d|", j);
+			int ind = j * blockSize;
+			int rollP = 1;
+			g[i][j] = g[i-1][ind + blockSize - 1];
+			p[i][j] = p[i-1][ind];
+			for(int k = 0; k < blockSize; ++k){
+				if(k > 0){
+					p[i][j] &= p[i-1][ind + k];
+					rollP &= p[i-1][ind + (blockSize - k - 1)];
+					g[i][j] |= rollP & g[i-1][ind + blockSize - k - 2];
+				}
+			}
 		}
-		printf("\n");
+		debugBinary(g[i], (int)pow(blockSize, reqBlocks - i), 'G');
+		debugBinary(p[i], (int)pow(blockSize, reqBlocks - i), 'P');
+	}
+	//Calculate C[0]:
+	c[0][0] = g[reqBlocks - 1][0] | (p[reqBlocks - 1][0] & 0);
+	for(int i = 1; i < blockSize; ++i){
+		c[0][i] = g[reqBlocks - 1][i] | (p[reqBlocks - 1][i] & c[0][i-1]);
+	}
+	debugBinary(c[0], blockSize, 'C');
+	//Collapse all group generates and group propogates:
+	for(int i = reqBlocks - 1; i > 0; --i){
+		for(int j = 0; j < (int)pow(blockSize, reqBlocks + 1 - i); ++j){
+			int ind = j * blockSize;
+			// c[i][j] = g[i][j] | (p[] & SC[k-1]);
+		}
+		debugBinary(c[i], (int)pow(blockSize, reqBlocks - i), 'C');
 	}
 
-
-
-	//Collapse all group generates and group propogates:
 
 
 	//Compute sum:
