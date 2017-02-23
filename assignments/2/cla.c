@@ -128,7 +128,7 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	int** p;
 	int** g;
 	int** c;
-	int** s;
+	int* s;
 	//TODO: Convert to run with block size 8 and 262144 bits.
 	//TODO: Convert to use only loops.
 	printf("Carry Lookahead Sum, CS:\n");
@@ -140,13 +140,13 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	p = calloc(reqBlocks, sizeof(int*));
 	g = calloc(reqBlocks, sizeof(int*));
 	c = calloc(reqBlocks, sizeof(int*));
-
+	s = calloc(n, sizeof(int));
 	printf("REQUIRED BLOCKS FOR CALCULATION: %d\n", reqBlocks + 1);
-	for(int i = 0; i <= reqBlocks; ++i){
+	for(int i = 0; i < reqBlocks; ++i){
 		printf("CALLOC SIZE %d\n", (int)pow(blockSize, reqBlocks - i));
 		p[i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
 		g[i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
-		c[reqBlocks - i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
+		c[i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
 	}
 	for(int i = 0; i < n/numFiles; ++i){
 		p[0][i] = A->data[i] | B->data[i];
@@ -175,19 +175,33 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 		debugBinary(p[i], (int)pow(blockSize, reqBlocks - i), 'P');
 	}
 	//Calculate C[0]:
+	//TODO: Check carryin from other MPI threads?
 	c[0][0] = g[reqBlocks - 1][0] | (p[reqBlocks - 1][0] & 0);
 	for(int i = 1; i < blockSize; ++i){
 		c[0][i] = g[reqBlocks - 1][i] | (p[reqBlocks - 1][i] & c[0][i-1]);
 	}
 	debugBinary(c[0], blockSize, 'C');
 	//Collapse all group generates and group propogates:
-	for(int i = reqBlocks - 1; i > 0; --i){
-		for(int j = 0; j < (int)pow(blockSize, reqBlocks + 1 - i); ++j){
+	for(int i = 1; i < reqBlocks; ++i){
+		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i); ++j){
 			int ind = j * blockSize;
-			// c[i][j] = g[i][j] | (p[] & SC[k-1]);
+			c[reqBlocks - i][j] = 1;
+			// if(j % blockSize == 0){
+			// 	c[i][j] = c[i-1][j/blockSize];
+			// }
+			// else{
+			// 	c[i][j] = g[i][j] | (p[i][j] & c[i-1][j - 1]);
+			// }
 		}
-		debugBinary(c[i], (int)pow(blockSize, reqBlocks - i), 'C');
+		debugBinary(c[reqBlocks - i], (int)pow(blockSize, reqBlocks - i), 'C');
 	}
+
+	// //Calculate S[i]:
+	s[0] = xor(xor(A->data[0], B->data[0]), 0);
+	for(int i = 1; i < n/numFiles; ++i){
+		s[i] = xor(xor(A->data[i], B->data[i]), c[2][i]);
+	}
+	debugBinary(s, n/numFiles, 'S');
 
 
 
