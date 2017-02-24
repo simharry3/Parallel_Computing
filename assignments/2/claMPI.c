@@ -34,6 +34,7 @@
 #include <sys/types.h>
 
 //262144
+//512
 #define n 512
 #define blockSize 8
 #define hexSize n/4
@@ -151,8 +152,8 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 		p[0][i] = A->data[i] | B->data[i];
 		g[0][i] = A->data[i] & B->data[i];
 	}
-	debugBinary(g[0], n/numFiles, 'G');
-	debugBinary(p[0], n/numFiles, 'P');
+	// debugBinary(g[0], n/numFiles, 'G');
+	// debugBinary(p[0], n/numFiles, 'P');
 
 	// Calculate all group generates and group propogates:
 	for(int i = 1; i < reqBlocks; ++i){
@@ -170,8 +171,8 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 				}
 			}
 		}
-		debugBinary(g[i], (int)pow(blockSize, reqBlocks - i), 'G');
-		debugBinary(p[i], (int)pow(blockSize, reqBlocks - i), 'P');
+		// debugBinary(g[i], (int)pow(blockSize, reqBlocks - i), 'G');
+		// debugBinary(p[i], (int)pow(blockSize, reqBlocks - i), 'P');
 	}
 	//Calculate C[0]:
 	//TODO: Check carryin from other MPI threads?
@@ -179,11 +180,12 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 		c[i][0] = g[i][0] | (p[i][0] & 0);
 	}
 	for(int i = 1; i < blockSize; ++i){
-		c[reqBlocks - 1][i] = g[reqBlocks - 1][i] | (p[reqBlocks - 1][i] & c[reqBlocks - 1][i-1]);
+		c[0][i] = g[0][i] | (p[0][i] & c[0][i-1]);
 	}
-	debugBinary(c[reqBlocks - 1], blockSize, 'C');
+	// debugBinary(c[reqBlocks - 1], blockSize, 'C');
 	//Collapse all group generates and group propogates:
 	for(int i = reqBlocks - 1; i > 0; --i){
+		printf("Size: %d\n", (int)pow(blockSize, reqBlocks - i + 1));
 		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i + 1); ++j){
 			if(j % blockSize == 0){
 				c[i - 1][j + 1] = c[i][j/blockSize];
@@ -193,7 +195,7 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 			}
 		}
 
-		debugBinary(c[i - 1], (int)pow(blockSize, reqBlocks - i + 1), 'C');
+		// debugBinary(c[i - 1], (int)pow(blockSize, reqBlocks - i + 1), 'C');
 	}
 
 	// Calculate S[i]:
@@ -202,7 +204,7 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	for(int i = 1; i < n/numFiles; ++i){
 		S->data[i] = xor(xor(A->data[i], B->data[i]), c[0][i]);
 	}
-	debugBinary(S->data, n/numFiles, 'S');
+	// debugBinary(S->data, n/numFiles, 'S');
 
 }
 
@@ -356,10 +358,10 @@ void writeOutputFile(binaryNumber* S){
 	char* filename = calloc(18, sizeof(char));
 	sprintf(filename, "./output/result.%d", fileNumber);
 	fo1 = fopen(filename, "w");
-	// for(int j = 0; j < hexSize/numFiles; ++j){
-	// 	fputc(S->hex[hexSize/numFiles - j], fo1);
-	// }
-	// fclose(fo1);
+	for(int j = 0; j < hexSize/numFiles; ++j){
+		fputc(S->hex[j], fo1);
+	}
+	fclose(fo1);
 }
 
 int main(int argc, char* argv[]){
@@ -387,10 +389,10 @@ int main(int argc, char* argv[]){
 	getInputFile(&A, &B);
 	printf("============INPUTS=============\n");
 	hexToBinary(&A, &B);
-	printHex(&A);
-	printBinary(&A);
-	printHex(&B);
-	printBinary(&B);
+	// printHex(&A);
+	// printBinary(&A);
+	// printHex(&B);
+	// printBinary(&B);
 
 	// // printf("\n\n");
 	printf("============OUTPUTS=============\n");
@@ -403,8 +405,8 @@ int main(int argc, char* argv[]){
 	// // // printf("\n");
 
 	makeHex(&S);
-	printHex(&S);
-	// writeOutputFile(&S);
+	// printHex(&S);
+	writeOutputFile(&S);
 
 
 
