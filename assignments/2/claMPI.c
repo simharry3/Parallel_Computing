@@ -182,32 +182,33 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 		c[reqBlocks - 1][i] = g[reqBlocks - 1][i] | (p[reqBlocks - 1][i] & c[reqBlocks - 1][i-1]);
 	}
 	debugBinary(c[reqBlocks - 1], blockSize, 'C');
-	// //Collapse all group generates and group propogates:
-	for(int i = 2; i <= reqBlocks; ++i){
-		for(int j = 0; j < (int)pow(blockSize, i); ++j){
-			int ind = j * blockSize;
-	// 		//c[reqBlocks - i][j] = 1;
+	//Collapse all group generates and group propogates:
+	for(int i = reqBlocks - 1; i > 0; --i){
+		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i + 1); ++j){
+	// 		int ind = j * blockSize;
+	// // 		//c[reqBlocks - i][j] = 1;
 			if(j % blockSize == 0){
-				//c[reqBlocks - i][j] = 1;
-				// printf("%d|", c[reqBlocks - i - 1][j/blockSize]);
-			 c[reqBlocks - i][j] = c[reqBlocks - i + 1][j/blockSize];
+	// 			//c[reqBlocks - i][j] = 1;
+	// 			// printf("%d|", c[reqBlocks - i - 1][j/blockSize]);
+			 c[i - 1][j + 1] = c[i][j/blockSize];
 			}
 			else{
-			//c[reqBlocks - i][j] = 2;
-			// printf("%d|", g[reqBlocks - i][j]);
-			c[reqBlocks - i][j] = g[i - 1][j-1] | (p[i - 1][j-1] & c[reqBlocks - i][j - 1]);
+				// c[reqBlocks - i][j] = 2;
+	// 		// printf("%d|", g[reqBlocks - i][j]);
+			c[i - 1][j + 1] = g[reqBlocks - i - 1][j] | (p[reqBlocks - i - 1][j] & c[i - 1][j]);
 			}
 		}
-		debugBinary(c[reqBlocks - i], (int)pow(blockSize, i), 'C');
+		// printf("SIZE: %d\n", (int)pow(blockSize, reqBlocks - i + 1));
+		debugBinary(c[i - 1], (int)pow(blockSize, reqBlocks - i + 1), 'C');
 	}
 
 	// Calculate S[i]:
 	//TODO CHECK CARRY IN
-	// S->data[0] = xor(xor(A->data[0], B->data[0]), 0);
-	// for(int i = 1; i < n/numFiles; ++i){
-	// 	S->data[i] = xor(xor(A->data[i], B->data[i]), c[reqBlocks - 1][i]);
-	// }
-	// debugBinary(S->data, n/numFiles, 'S');
+	S->data[0] = xor(xor(A->data[0], B->data[0]), 0);
+	for(int i = 1; i < n/numFiles; ++i){
+		S->data[i] = xor(xor(A->data[i], B->data[i]), c[0][i]);
+	}
+	debugBinary(S->data, n/numFiles, 'S');
 
 }
 
@@ -260,9 +261,9 @@ void getInputFile(binaryNumber* A, binaryNumber* B){
 	for(int i = 0; i < filesPerRank; ++i){
 		sprintf(filename, "inputs/input.%d", i);
 		fp = fopen(filename, "r");
-		fgets(buffer1, hexSize/numFiles, fp);
+		fgets(buffer1, hexSize/numFiles + 1, fp);
 		fseek(fp, 1, SEEK_CUR);
-		fgets(buffer2, hexSize/numFiles, fp);
+		fgets(buffer2, hexSize/numFiles + 1, fp);
 
 		for(int j = 0; j < hexSize/numFiles; ++j){
 			index = (i * hexSize) + j;
@@ -383,7 +384,7 @@ int main(int argc, char* argv[]){
 	//	yyyy	yyyy	yyyy	yyyy	...
 	//
 
-	MPI_Init(NULL, NULL);
+	// MPI_Init(NULL, NULL);
 
 
 	inputParse(argv[1], argv[2]);
@@ -394,6 +395,7 @@ int main(int argc, char* argv[]){
 	binaryNumber B;
 	B.name = 'B';
 	binaryNumber S;
+	S.name = 'S';
 
 	getInputFile(&A, &B);
 	printf("============INPUTS=============\n");
@@ -403,7 +405,7 @@ int main(int argc, char* argv[]){
 	printHex(&B);
 	printBinary(&B);
 
-	// printf("\n\n");
+	// // printf("\n\n");
 	printf("============OUTPUTS=============\n");
 	sumCLA(&A, &B, &S);
 	
