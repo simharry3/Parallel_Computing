@@ -1,6 +1,6 @@
 Written by: Clayton Rayment
-Date: 01/20/2017
+Date: 02/24/2017
 
-If you would like to have more/less display data, there are several lines commented out which will provide additional debugging information. Enjoy!
+USAGE: Included is a python file, which will generate files full of random hex numbers. You can either use that to generate two input files, which will then be parsed out into the smaller input files in their own directory. In this case run the file like: mpirun -n 8 ./cla.o in1 in2. Otherwise, run using mpirun -n 8 ./cla.o, and the program will look inside the input directory for the files.
 
-NOTES: Program is adopted from previous computer organization assignment where students were tasked to construct a 64 bit 4 bit block CLA function. This code has been modified from its original form to support 512 bit numbers with an 8 bit block.
+NOTES (Cont'd): I am not happy with how this homework turned out. I was very close to getting it to work, however I simply ran out of time this week. Not to make excuses, as we did have a while to do it, but I have been dealing with a melted piston in my car, and am currently in the middle of putting a new engine in, which has been a very long process. If there was any way that I could finish this assignment and maybe get partial credit for it, I would be very happy. Otherwise, I accept the fact that it was due today, and am turning in what I have finished. The program is supposed to be fully scalable, with adjustable block sizes, scalable input size, etc, I just bit off a bit more than I could chew for the last two weeks.

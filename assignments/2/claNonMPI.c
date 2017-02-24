@@ -25,6 +25,7 @@
 //Input size: 512bit
 
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
@@ -33,7 +34,7 @@
 #include <sys/types.h>
 
 //262144
-#define n 512
+#define n 262144/6
 #define blockSize 8
 #define hexSize n/4
 #define numRanks 8
@@ -459,6 +460,7 @@ int main(int argc, char* argv[]){
 	//	yyyy	yyyy	yyyy	yyyy	...
 	//
 
+	clock_t begin = clock();
 
 	inputParse(argv[1], argv[2]);
 
@@ -481,6 +483,7 @@ int main(int argc, char* argv[]){
 	printf("============OUTPUTS=============\n");
 	sumCLA(&A, &B, &S);
 	
+
 	// //Uncomment for debugging:
 	// // printOutput(&S);
 	// // sumRipple(&A, &B, &S);
@@ -489,7 +492,8 @@ int main(int argc, char* argv[]){
 
 	// makeHex(&S);
 	// printHex(&S);
-
+	clock_t end = clock();
+	printf("TIME: %f\n", (double)(end - begin)/CLOCKS_PER_SEC);
 
 
 	return EXIT_SUCCESS;

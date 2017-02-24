@@ -35,7 +35,7 @@
 
 //262144
 //512
-#define n 512
+#define n 262144
 #define blockSize 8
 #define hexSize n/4
 #define numRanks 8
@@ -126,24 +126,23 @@ void debugBinary(int* num, int len, char name){
 
 
 //Main CLA implementation according to the PDF
-void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
+void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S, int threadID, int useBarriers){
 	int** p;
 	int** g;
 	int** c;
 	//TODO: Convert to run with block size 8 and 262144 bits.
 	//TODO: Convert to use only loops.
-	printf("Carry Lookahead Sum, CS:\n");
+	// printf("Carry Lookahead Sum, CS:\n");
 	//Calculate all G[i] and P[i]:
 
-	//TODO: get carry input from other MPI file
 	//CALLOC REQUIRED ARRAYS IN FOR LOOP:
 	int reqBlocks = (int)log(n/numFiles)/log(blockSize) + 1;
 	p = calloc(reqBlocks, sizeof(int*));
 	g = calloc(reqBlocks, sizeof(int*));
 	c = calloc(reqBlocks, sizeof(int*));
-	printf("REQUIRED BLOCKS FOR CALCULATION: %d\n", reqBlocks);
+	// printf("REQUIRED BLOCKS FOR CALCULATION: %d\n", reqBlocks);
 	for(int i = 0; i < reqBlocks; ++i){
-		printf("CALLOC SIZE %d\n", (int)pow(blockSize, reqBlocks - i));
+		// printf("CALLOC SIZE %d\n", (int)pow(blockSize, reqBlocks - i));
 		p[i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
 		g[i] = calloc((int)pow(blockSize, reqBlocks - i), sizeof(int));
 		c[i] = calloc((int)pow(blockSize, reqBlocks - i) + 1, sizeof(int));
@@ -152,9 +151,12 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 		p[0][i] = A->data[i] | B->data[i];
 		g[0][i] = A->data[i] & B->data[i];
 	}
-	// debugBinary(g[0], n/numFiles, 'G');
-	// debugBinary(p[0], n/numFiles, 'P');
-
+	// if(threadID == 1){
+	// 	debugBinary(A->data, n/numFiles, 'A');
+	// 	debugBinary(B->data, n/numFiles, 'B');
+	// 	debugBinary(g[0], n/numFiles, 'G');
+	// 	debugBinary(p[0], n/numFiles, 'P');
+	// }
 	// Calculate all group generates and group propogates:
 	for(int i = 1; i < reqBlocks; ++i){
 		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i); ++j){
@@ -171,40 +173,70 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 				}
 			}
 		}
+		
 		// debugBinary(g[i], (int)pow(blockSize, reqBlocks - i), 'G');
 		// debugBinary(p[i], (int)pow(blockSize, reqBlocks - i), 'P');
 	}
+	// if(useBarriers){
+	// 		MPI_Barrier(MPI_COMM_WORLD);
+	// 	}
 	//Calculate C[0]:
 	//TODO: Check carryin from other MPI threads?
+	MPI_Request request;
+	MPI_Status status;
+	int carryin = 0;
+	if(threadID != 0){
+		MPI_Recv(&carryin, 1, MPI_INT, threadID - 1, 123, MPI_COMM_WORLD, &status);
+		// if(threadID == 1){
+		// 	printf("Carry IN: %d\n", carryin);
+		// }
+	}
+	
 	for(int i = 0; i < reqBlocks; ++i){
-		c[i][0] = g[i][0] | (p[i][0] & 0);
+		//c[i][0] = g[i][0] | (p[i][0] & carryin);
+		c[i][0] = carryin;
 	}
 	for(int i = 1; i < blockSize; ++i){
 		c[0][i] = g[0][i] | (p[0][i] & c[0][i-1]);
 	}
-	// debugBinary(c[reqBlocks - 1], blockSize, 'C');
+	// if(threadID == 1){
+	// 	debugBinary(c[0], blockSize, 'C');
+	// }
 	//Collapse all group generates and group propogates:
 	for(int i = reqBlocks - 1; i > 0; --i){
-		printf("Size: %d\n", (int)pow(blockSize, reqBlocks - i + 1));
+		// printf("Size: %d\n", (int)pow(blockSize, reqBlocks - i + 1));
 		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i + 1); ++j){
-			if(j % blockSize == 0){
-				c[i - 1][j + 1] = c[i][j/blockSize];
+			if(j + 1 % blockSize == 0){
+				c[i - 1][j + 1] = c[i][(j + 1)/blockSize];
 			}
 			else{
 				c[i - 1][j + 1] = g[reqBlocks - i - 1][j] | (p[reqBlocks - i - 1][j] & c[i - 1][j]);
 			}
 		}
-
-		// debugBinary(c[i - 1], (int)pow(blockSize, reqBlocks - i + 1), 'C');
+		
+	}
+	// if(useBarriers){
+	// 	MPI_Barrier(MPI_COMM_WORLD);
+	// }
+	//Send carryout:
+	if(threadID != numRanks - 1){
+		// if(threadID == 0){
+		// 	printf("CARRY OUT: %d\n", c[0][n/numFiles]);
+		// }
+		MPI_Send(&c[0][n/numFiles], 1, MPI_INT, threadID + 1, 123, MPI_COMM_WORLD);
 	}
 
 	// Calculate S[i]:
 	//TODO CHECK CARRY IN
-	S->data[0] = xor(xor(A->data[0], B->data[0]), 0);
+	S->data[0] = xor(xor(A->data[0], B->data[0]), c[0][0]);
 	for(int i = 1; i < n/numFiles; ++i){
 		S->data[i] = xor(xor(A->data[i], B->data[i]), c[0][i]);
 	}
-	// debugBinary(S->data, n/numFiles, 'S');
+	// if(threadID == 1){
+	// 	debugBinary(S->data, n/numFiles, 'S');
+	// }
+	printf("Task %d has finished computing sectional CLA\n", threadID);
+	fflush(NULL);
 
 }
 
@@ -243,7 +275,7 @@ void getInputs(binaryNumber* A, binaryNumber* B){
 	free(buffer2);
 }
 
-void getInputFile(binaryNumber* A, binaryNumber* B){
+void getInputFile(binaryNumber* A, binaryNumber* B, int threadID){
 	// int n = 64;
 	char* filename = calloc(15, sizeof(char));
 	int filesPerRank = numFiles/numRanks;
@@ -255,7 +287,7 @@ void getInputFile(binaryNumber* A, binaryNumber* B){
 	int index = 0;
 	FILE* fp;
 	for(int i = 0; i < filesPerRank; ++i){
-		sprintf(filename, "inputs/input.%d", i);
+		sprintf(filename, "inputs/input.%d", threadID + i);
 		fp = fopen(filename, "r");
 		fgets(buffer1, hexSize/numFiles + 1, fp);
 		fseek(fp, 1, SEEK_CUR);
@@ -318,7 +350,7 @@ void printOutput(binaryNumber* A){
 //Parse input files, and split them into seperate files for MPI use.
 // Math is as follows:
 // in1 - in2
-void inputParse(char* in1, char* in2){
+void inputParse(char* in1, char* in2, int threadID){
 	char* buffer1 = calloc(hexSize/numFiles + 1, sizeof(char));
 	char* buffer2 = calloc(hexSize/numFiles + 1, sizeof(char));
 
@@ -327,36 +359,35 @@ void inputParse(char* in1, char* in2){
 	FILE* fo1;
 
 	fp1 = fopen(in1, "r");
+	fseek(fp1, threadID * (hexSize/numFiles), SEEK_CUR);
 	fp2 = fopen(in2, "r");
-
+	fseek(fp2, threadID * (hexSize/numFiles), SEEK_CUR);
 	//splitInputName  = input.x
 	mkdir("inputs", 0700);
 	char* splitInName = calloc(17, sizeof(char));
-	for(int index = 0; index < numFiles; ++index){
-		fgets(buffer1, hexSize/numFiles + 1, fp1);
-		fgets(buffer2, hexSize/numFiles + 1, fp2);
-		sprintf(splitInName, "./inputs/input.%d", index);
-		fo1 = fopen(splitInName, "w");
-		int j = hexSize/numFiles;
-		for(int i = 0; i < j; ++i){
-			fputc(buffer1[i], fo1);
-		}
-		fputc('\n', fo1);
-		for(int i = 0; i < j; ++i){
-			fputc(buffer2[i], fo1);
-		}
-		fclose(fo1);
+	fgets(buffer1, hexSize/numFiles + 1, fp1);
+	fgets(buffer2, hexSize/numFiles + 1, fp2);
+	sprintf(splitInName, "./inputs/input.%d", threadID);
+	fo1 = fopen(splitInName, "w");
+	int j = hexSize/numFiles;
+	for(int i = 0; i < j; ++i){
+		fputc(buffer1[i], fo1);
 	}
+	fputc('\n', fo1);
+	for(int i = 0; i < j; ++i){
+		fputc(buffer2[i], fo1);
+	}
+	fclose(fo1);
 	fclose(fp1);
-	fclose(fp2);	
+	fclose(fp2);
+	printf("Task %d has finished parsing the input file\n", threadID);	
 }
 
-void writeOutputFile(binaryNumber* S){
+void writeOutputFile(binaryNumber* S, int threadID){
 	FILE* fo1;
-	int fileNumber = 0;
 	mkdir("output", 0700);
 	char* filename = calloc(18, sizeof(char));
-	sprintf(filename, "./output/result.%d", fileNumber);
+	sprintf(filename, "./output/result.%d", threadID);
 	fo1 = fopen(filename, "w");
 	for(int j = 0; j < hexSize/numFiles; ++j){
 		fputc(S->hex[j], fo1);
@@ -373,11 +404,25 @@ int main(int argc, char* argv[]){
 	//	yyyy	yyyy	yyyy	yyyy	...
 	//
 
-	// MPI_Init(NULL, NULL);
+	double t1, t2;
 
+	MPI_Init(NULL, NULL);
+	t1 = MPI_Wtime();
+	int world_size;
+	int world_rank;
+	char processor_name[MPI_MAX_PROCESSOR_NAME];
+	int name_len;
 
-	inputParse(argv[1], argv[2]);
+	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+	MPI_Get_processor_name(processor_name, &name_len);
+	int workers = world_size - 1;
 
+	if(argc == 3){
+		inputParse(argv[1], argv[2], world_rank);
+	}
+	//We need a barrier otherwise we would run into issues:
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	binaryNumber A;
 	A.name = 'A';
@@ -386,28 +431,22 @@ int main(int argc, char* argv[]){
 	binaryNumber S;
 	S.name = 'S';
 
-	getInputFile(&A, &B);
-	printf("============INPUTS=============\n");
+	// printf("============INPUTS=============\n");
+	getInputFile(&A, &B, world_rank);
 	hexToBinary(&A, &B);
-	// printHex(&A);
-	// printBinary(&A);
-	// printHex(&B);
-	// printBinary(&B);
-
-	// // printf("\n\n");
-	printf("============OUTPUTS=============\n");
-	sumCLA(&A, &B, &S);
 	
-	// // //Uncomment for debugging:
-	// // // printOutput(&S);
-	// // // sumRipple(&A, &B, &S);
-	// // // printOutput(&S);
-	// // // printf("\n");
+	sumCLA(&A, &B, &S, world_rank, 1);
 
 	makeHex(&S);
-	// printHex(&S);
-	writeOutputFile(&S);
 
+	writeOutputFile(&S, world_rank);
+	MPI_Barrier(MPI_COMM_WORLD);
+	t2 = MPI_Wtime();
+	MPI_Finalize();
+
+	if(world_rank == 0){
+		printf("TIME: %f\n", t2-t1);
+	}
 
 
 	return EXIT_SUCCESS;

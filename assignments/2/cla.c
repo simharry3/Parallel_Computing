@@ -25,6 +25,7 @@
 //Input size: 512bit
 
 #include <stdio.h>
+#include <mpi.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
@@ -33,7 +34,7 @@
 #include <sys/types.h>
 
 //262144
-#define n 512
+#define n 4096
 #define blockSize 8
 #define hexSize n/4
 #define numRanks 8
@@ -458,9 +459,12 @@ int main(int argc, char* argv[]){
 	//	xxxx	xxxx	xxxx	xxxx	...
 	//	yyyy	yyyy	yyyy	yyyy	...
 	//
-
-
-	inputParse(argv[1], argv[2]);
+	double t1, t2;
+	MPI_Init(NULL, NULL);
+	t1 = MPI_Wtime();
+	if(argc == 3){
+		inputParse(argv[1], argv[2]);
+	}
 
 
 	binaryNumber A;
@@ -489,7 +493,9 @@ int main(int argc, char* argv[]){
 
 	// makeHex(&S);
 	// printHex(&S);
-
+	t2 = MPI_Wtime();
+	MPI_Finalize();
+	printf("TIME: %f\n", t2-t1);
 
 
 	return EXIT_SUCCESS;
