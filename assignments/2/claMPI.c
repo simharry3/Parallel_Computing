@@ -185,20 +185,14 @@ void sumCLA(binaryNumber* A, binaryNumber* B, binaryNumber* S){
 	//Collapse all group generates and group propogates:
 	for(int i = reqBlocks - 1; i > 0; --i){
 		for(int j = 0; j < (int)pow(blockSize, reqBlocks - i + 1); ++j){
-	// 		int ind = j * blockSize;
-	// // 		//c[reqBlocks - i][j] = 1;
 			if(j % blockSize == 0){
-	// 			//c[reqBlocks - i][j] = 1;
-	// 			// printf("%d|", c[reqBlocks - i - 1][j/blockSize]);
-			 c[i - 1][j + 1] = c[i][j/blockSize];
+				c[i - 1][j + 1] = c[i][j/blockSize];
 			}
 			else{
-				// c[reqBlocks - i][j] = 2;
-	// 		// printf("%d|", g[reqBlocks - i][j]);
-			c[i - 1][j + 1] = g[reqBlocks - i - 1][j] | (p[reqBlocks - i - 1][j] & c[i - 1][j]);
+				c[i - 1][j + 1] = g[reqBlocks - i - 1][j] | (p[reqBlocks - i - 1][j] & c[i - 1][j]);
 			}
 		}
-		// printf("SIZE: %d\n", (int)pow(blockSize, reqBlocks - i + 1));
+
 		debugBinary(c[i - 1], (int)pow(blockSize, reqBlocks - i + 1), 'C');
 	}
 
@@ -349,13 +343,6 @@ void inputParse(char* in1, char* in2){
 		for(int i = 0; i < j; ++i){
 			fputc(buffer2[i], fo1);
 		}
-		// for(int i = j; i != -1; --i){
-		// 	fputc(buffer1[i], fo1);
-		// }
-		// fputc('\n', fo1);
-		// for(int i = j; i != -1; --i){
-		// 	fputc(buffer2[i], fo1);
-		// }
 		fclose(fo1);
 	}
 	fclose(fp1);
@@ -415,8 +402,8 @@ int main(int argc, char* argv[]){
 	// // // printOutput(&S);
 	// // // printf("\n");
 
-	// makeHex(&S);
-	// printHex(&S);
+	makeHex(&S);
+	printHex(&S);
 	// writeOutputFile(&S);
 
 
