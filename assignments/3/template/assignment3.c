@@ -53,7 +53,8 @@ void destroyBoard();
 
 //Runtime Functions
 void updateCells();
-int checkCondition(int* neighbors, int condition);
+int checkCondition(int*, int);
+void updateGhostData(int***, int, int);
 
 
 /***************************************************************************/
@@ -164,6 +165,16 @@ int wrapHorizontalIndex(int index){
     return index;
 }
 
+int wrapVerticalIndex(int index){
+    if(index == -1){
+        return HEIGHT - 1;
+    }
+    else if(index == HEIGHT){
+        return 0;
+    }
+    return index;
+}
+
 void updateCells(int*** gameBoard, int rank, int rowsPerRank){
     int* neighbors = calloc(8, sizeof(int));
     for(int i = 1; i < rowsPerRank; ++i){
@@ -211,4 +222,11 @@ int checkCondition(int* neighbors, int condition){
         }
     }
     return DEAD;
+}
+
+void updateGhostData(int*** gameBoard, int rank, int rowsPerRank){
+    MPI_Isend(wrapVerticalIndex(rank - 1), gameBoard[1]);
+    MPI_Isend(wrapVerticalIndex(rank + 1) ,gameBoard[rowsPerRank - 1]);
+    gameBoard[0] = MPI_Irecv();
+    gameBoard[rowsPerRank] = MPI_Irecv();
 }
