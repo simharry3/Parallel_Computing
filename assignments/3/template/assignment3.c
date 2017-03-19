@@ -165,14 +165,14 @@ int wrapHorizontalIndex(int index){
     return index;
 }
 
-int wrapVerticalIndex(int index){
-    if(index == -1){
-        return HEIGHT - 1;
+int wrapRank(int rank, int rowsPerRank){
+    if(rank == -1){
+        return HEIGHT/rowsPerRank - 1;
     }
-    else if(index == HEIGHT){
+    else if(rank == HEIGHT/rowsPerRank){
         return 0;
     }
-    return index;
+    return rank;
 }
 
 void updateCells(int*** gameBoard, int rank, int rowsPerRank){
@@ -225,8 +225,14 @@ int checkCondition(int* neighbors, int condition){
 }
 
 void updateGhostData(int*** gameBoard, int rank, int rowsPerRank){
-    MPI_Isend(wrapVerticalIndex(rank - 1), gameBoard[1]);
-    MPI_Isend(wrapVerticalIndex(rank + 1) ,gameBoard[rowsPerRank - 1]);
-    gameBoard[0] = MPI_Irecv();
-    gameBoard[rowsPerRank] = MPI_Irecv();
+    MPI_Request request1;
+    MPI_Request request2;
+    MPI_Isend(gameBoard[1], WIDTH, MPI_INT, wrapRank(rank - 1, rowsPerRank),
+     rank * rowsPerRank, MPI_COMM_WORLD, &request1);
+    MPI_Isend(gameBoard[rowsPerRank - 1], WIDTH, MPI_INT, wrapRank(rank + 1, rowsPerRank),
+     rank * rowsPerRank, MPI_COMM_WORLD, &request2);
+
+    // MPI_Irecv(gameBoard[0], WIDTH, MPI_INT, )
+    // gameBoard[0] = MPI_Irecv();
+    // gameBoard[rowsPerRank] = MPI_Irecv();
 }
