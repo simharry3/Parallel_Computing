@@ -23,14 +23,16 @@
 
 #define ALIVE 1
 #define DEAD  0
-#define DEBUG 1
+#define DEBUG 0
 //8192
-#define WIDTH 16
-#define HEIGHT 16
+#define WIDTH 8192
+#define HEIGHT 8192
 
-#define EVOLVE_TIME 10
+#define EVOLVE_TIME 100
 
 #define THRESHOLD 50
+
+#define CHECKPOINT_INTERVAL 5
 
 /***************************************************************************/
 /* Global Vars *************************************************************/
@@ -55,6 +57,8 @@ void destroyBoard();
 void updateCells();
 int checkCondition(int*, int);
 void updateGhostData(int***, int, int);
+void writeCheckpoint(int***, int***, int, int);
+
 
 
 /***************************************************************************/
@@ -78,14 +82,22 @@ int main(int argc, char *argv[])
 // This just show you how to call the RNG.    
     
 // Insert your code
+    int start = 0;
+    if(mpi_myrank == 0){
+        start = MPI_Wtime();
+    }
     int** gameBoard = NULL;
-    int** ghostRows = NULL;
 
-    initBoard(&gameBoard, &ghostRows, mpi_myrank, HEIGHT/mpi_commsize);
+    universeCheckpoint = calloc(HEIGHT, sizeof(int*));
+    for(int i = 0; i < HEIGHT; ++i){
+        universeCheckpoint[i] = calloc(WIDTH, sizeof(int));
+    }
+
+    initBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
 
     MPI_Barrier( MPI_COMM_WORLD );
 
-    populateBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
+    populateBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, THRESHOLD);
 
     MPI_Barrier( MPI_COMM_WORLD );
 
@@ -93,17 +105,32 @@ int main(int argc, char *argv[])
         if(DEBUG){
             printf("RANK %d: Timestep: %d\n", mpi_myrank, i);
         }
-        updateCells(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
+        updateGhostData(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
+        MPI_Barrier(MPI_COMM_WORLD); //barrier here to make sure all ghost data is up to date
+        updateCells(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, THRESHOLD);
         MPI_Barrier(MPI_COMM_WORLD);
+        if(DEBUG){
+            printf("=========================\n");
+            fflush(NULL);
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+        if(i % CHECKPOINT_INTERVAL == 0){
+            writeCheckpoint(&gameBoard, &universeCheckpoint, mpi_myrank, HEIGHT/mpi_commsize);
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
     }
 
 
     MPI_Barrier( MPI_COMM_WORLD );
-    destroyBoard(&gameBoard, &ghostRows, mpi_myrank, HEIGHT/mpi_commsize);
+    destroyBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
 
 // END -Perform a barrier and then leave MPI
     MPI_Barrier( MPI_COMM_WORLD );
-
+    double end;
+    if(mpi_myrank == 0){
+        end = MPI_Wtime();
+        printf("RUNNING TIME: %f\n", end - start);
+    }
     MPI_Finalize();
     return 0;
 }
@@ -113,13 +140,8 @@ int main(int argc, char *argv[])
 /***************************************************************************/
 
 
-void initBoard(int*** gameBoard, int*** ghostRows, int rank, int rowsPerRank){
-    *ghostRows = calloc(2, sizeof(int*));
-    for(int i = 0; i < 2; ++i){
-        (*ghostRows)[i] = calloc(WIDTH, sizeof(int));
-    }
-
-    *gameBoard = calloc(rowsPerRank, sizeof(int*));
+void initBoard(int*** gameBoard, int rank, int rowsPerRank){
+    *gameBoard = calloc(rowsPerRank + 2, sizeof(int*));
     for(int i = 0; i < rowsPerRank + 2; ++i){
         if(DEBUG){
             printf("RANK %d: INIT ROW %d\n", rank, rank * rowsPerRank + i);
@@ -128,15 +150,11 @@ void initBoard(int*** gameBoard, int*** ghostRows, int rank, int rowsPerRank){
     }
 }
 
-void destroyBoard(int*** gameBoard, int*** ghostRows, int rank, int rowsPerRank){
-    for(int i = 0; i < 2; ++i){
-        free((*ghostRows)[i]);
-    }
-    free(*ghostRows);
-    
+void destroyBoard(int*** gameBoard, int rank, int rowsPerRank){
     for(int i = 0; i < rowsPerRank + 2; ++i){
         if(DEBUG){
             printf("RANK %d: DESTROY ROW %d\n", rank, rank * rowsPerRank + i);
+            fflush(NULL);
         }
        free((*gameBoard)[i]);
     }
@@ -144,13 +162,13 @@ void destroyBoard(int*** gameBoard, int*** ghostRows, int rank, int rowsPerRank)
 }
 
 
-void populateBoard(int*** gameBoard, int rank, int rowsPerRank){
+void populateBoard(int*** gameBoard, int rank, int rowsPerRank, int threshold){
     for(int i = 1; i < rowsPerRank; ++i){
         if(DEBUG){
             printf("RANK %d: POPULATING ROW %d\n", rank, rank * rowsPerRank + i);
         }
         for(int j = 0; j < WIDTH; ++j){
-            (*gameBoard)[i][j] = (GenVal(rank * rowsPerRank + i) > THRESHOLD) ? 1 : 0;
+            (*gameBoard)[i][j] = (GenVal(rank * rowsPerRank + i) > threshold) ? 1 : 0;
         }
     }
 }
@@ -175,12 +193,12 @@ int wrapRank(int rank, int rowsPerRank){
     return rank;
 }
 
-void updateCells(int*** gameBoard, int rank, int rowsPerRank){
+void updateCells(int*** gameBoard, int rank, int rowsPerRank, int threshold){
     int* neighbors = calloc(8, sizeof(int));
     for(int i = 1; i < rowsPerRank; ++i){
         for(int j = 0; j < WIDTH; ++j){
             //Check randomness threshold here
-            if(GenVal(rank * rowsPerRank + i) > THRESHOLD){
+            if(GenVal(rank * rowsPerRank + i) > threshold){
                 int index = 0;
                 for(int k = - 1; k <= 1; ++k){
                     for(int l = 0; l <= 1; ++l){
@@ -193,7 +211,12 @@ void updateCells(int*** gameBoard, int rank, int rowsPerRank){
                 (*gameBoard)[i][j] = checkCondition(neighbors, (*gameBoard)[i][j]);
             }
             else{
-                (*gameBoard)[i][j] = DEAD;
+                if(GenVal(rank * rowsPerRank + i) > 0.5){
+                    (*gameBoard)[i][j] = DEAD;
+                }
+                else{
+                    (*gameBoard)[i][j] = ALIVE;
+                }
             }
         }
     }
@@ -225,14 +248,32 @@ int checkCondition(int* neighbors, int condition){
 }
 
 void updateGhostData(int*** gameBoard, int rank, int rowsPerRank){
-    MPI_Request request1;
-    MPI_Request request2;
-    MPI_Isend(gameBoard[1], WIDTH, MPI_INT, wrapRank(rank - 1, rowsPerRank),
-     rank * rowsPerRank, MPI_COMM_WORLD, &request1);
-    MPI_Isend(gameBoard[rowsPerRank - 1], WIDTH, MPI_INT, wrapRank(rank + 1, rowsPerRank),
-     rank * rowsPerRank, MPI_COMM_WORLD, &request2);
+    MPI_Request request[4];
+    if(DEBUG){
+        printf("RANK %d: STARTING GDU. Forward Rank: %d Backward Rank: %d\n"
+            ,rank, wrapRank(rank + 1, rowsPerRank), wrapRank(rank - 1, rowsPerRank));
+        fflush(NULL);
+    }
+        
+    MPI_Isend((*gameBoard)[1], WIDTH, MPI_INT, wrapRank(rank - 1, rowsPerRank),
+        rank * rowsPerRank, MPI_COMM_WORLD, &request[0]);
+    MPI_Isend((*gameBoard)[rowsPerRank - 1], WIDTH, MPI_INT, wrapRank(rank + 1, rowsPerRank),
+        rank * rowsPerRank, MPI_COMM_WORLD, &request[1]);
 
-    // MPI_Irecv(gameBoard[0], WIDTH, MPI_INT, )
-    // gameBoard[0] = MPI_Irecv();
-    // gameBoard[rowsPerRank] = MPI_Irecv();
+    MPI_Irecv((*gameBoard)[0], WIDTH, MPI_INT, wrapRank(rank - 1, rowsPerRank), 
+        rank * rowsPerRank, MPI_COMM_WORLD, &request[2]);
+    MPI_Irecv((*gameBoard)[rowsPerRank], WIDTH, MPI_INT, wrapRank(rank + 1, rowsPerRank),
+        rank * rowsPerRank, MPI_COMM_WORLD, &request[3]);
+}
+
+void writeCheckpoint(int*** gameBoard, int*** checkpointBoard, int rank, int rowsPerRank){
+    if(DEBUG){
+        printf("RANK %d: WRITING CHECKPOINT\n", rank);
+        fflush(NULL);
+    }
+    for(int i = 1; i < rowsPerRank; ++i){
+        for(int j = 0; j < WIDTH; ++j){ 
+            (*checkpointBoard)[rank * rowsPerRank + i][j] = (*gameBoard)[i][j];
+        }
+    }   
 }
