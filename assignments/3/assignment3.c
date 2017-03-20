@@ -82,6 +82,11 @@ int main(int argc, char *argv[])
 // This just show you how to call the RNG.    
     
 // Insert your code
+    int thresh = THRESHOLD;
+    if(argc == 2){
+        thresh = strtol(argv[1], NULL, 10);
+    }
+    printf("THRESHOLD: %d\n", thresh);
     int start = 0;
     if(mpi_myrank == 0){
         start = MPI_Wtime();
