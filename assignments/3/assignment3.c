@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     if(argc == 2){
         thresh = strtol(argv[1], NULL, 10);
     }
-    printf("THRESHOLD: %d\n", thresh);
+    //printf("THRESHOLD: %d\n", thresh);
     int start = 0;
     if(mpi_myrank == 0){
         start = MPI_Wtime();
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 
     MPI_Barrier( MPI_COMM_WORLD );
 
-    populateBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, THRESHOLD);
+    populateBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, thresh);
 
     MPI_Barrier( MPI_COMM_WORLD );
 
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
         }
         updateGhostData(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
         MPI_Barrier(MPI_COMM_WORLD); //barrier here to make sure all ghost data is up to date
-        updateCells(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, THRESHOLD);
+        updateCells(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, thresh);
         MPI_Barrier(MPI_COMM_WORLD);
         if(DEBUG){
             printf("=========================\n");
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
     double end;
     if(mpi_myrank == 0){
         end = MPI_Wtime();
-        printf("RUNNING TIME: %f\n", end - start);
+        printf("RANKS: %d, THRESHOLD: %d, RUNNING TIME: %f\n", mpi_commsize, thresh, end - start);
     }
     MPI_Finalize();
     return 0;
@@ -173,7 +173,7 @@ void populateBoard(int*** gameBoard, int rank, int rowsPerRank, int threshold){
             printf("RANK %d: POPULATING ROW %d\n", rank, rank * rowsPerRank + i);
         }
         for(int j = 0; j < WIDTH; ++j){
-            (*gameBoard)[i][j] = (GenVal(rank * rowsPerRank + i) > threshold) ? 1 : 0;
+            (*gameBoard)[i][j] = (GenVal(rank * rowsPerRank + i) * 100 > threshold) ? ALIVE : DEAD;
         }
     }
 }
@@ -203,14 +203,15 @@ void updateCells(int*** gameBoard, int rank, int rowsPerRank, int threshold){
     for(int i = 1; i < rowsPerRank; ++i){
         for(int j = 0; j < WIDTH; ++j){
             //Check randomness threshold here
-            if(GenVal(rank * rowsPerRank + i) > threshold){
+            if(GenVal(rank * rowsPerRank + i) * 100 > threshold){
                 int index = 0;
                 for(int k = - 1; k <= 1; ++k){
-                    for(int l = 0; l <= 1; ++l){
-                        if(k == 0 || l == 0){
+                    for(int l = - 1; l <= 1; ++l){
+                        if(k == 0 && l == 0){
                             ++l;
                         }
-                        neighbors[index] = (*gameBoard[i+k][wrapHorizontalIndex(j+l)]);
+                        ++index;
+                        neighbors[index] = (*gameBoard)[i+k][wrapHorizontalIndex(j+l)];
                     }
                 }
                 (*gameBoard)[i][j] = checkCondition(neighbors, (*gameBoard)[i][j]);
