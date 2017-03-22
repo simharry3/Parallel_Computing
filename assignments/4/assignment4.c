@@ -3,7 +3,9 @@
 #include <string.h>
 #include <mpi.h>
 
-void generateData(int** data, int size);
+void generateData(char** data, int size);
+void writeData(char** data, char* filename);
+void readData(char** data, char* filename);
 
 // ./a <Num Files> <Block Size> <Num Read/Write> <Num Experiments>
 int main(int argc, char* argv[]){
@@ -15,8 +17,8 @@ int main(int argc, char* argv[]){
 	int blockSize = 0;
 	int numReadWrite = 0;
 	int numExp = 0;
-	unsigned int long long start_cycle =0, end_cycle = 0, total_cycle = 0;
-
+	unsigned int long long start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0;
+	char* filename  = "carelessWhisper.mov";
 
 	if(argc == 5){
 		numThreads = strtol(argv[1], NULL, 10);
@@ -50,14 +52,26 @@ int main(int argc, char* argv[]){
 
 
 	// call all read and writes
-	int* data;
+	char* data;
 	generateData(&data, blockSize);
 	for(int i = 0 ; i < blockSize; ++i){
 		printf("%c", data[i]);
 	}
 	printf("\n");
 
-
+	/////////////////////////
+	// MAIN EXPERIMENT 
+	/////////////////////////
+	for(int i = 0; i < numExp; ++i){
+		writeData(&data, filename);
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+	for(int i = 0; i < numExp; ++i){
+		readData(&data, filename);
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+	/////////////////////////
 	// Find the total cycle and close the file
 	//end_cycle = GetTimeBase();
 	//total_cycle = end_cycle - start_cycle;
@@ -69,14 +83,16 @@ int main(int argc, char* argv[]){
 }
 
 
-void generateData(int** data, int size){
-	// printf("SIZEOF CHAR: %d\n", (int)sizeof(char));
+void generateData(char** data, int size){
 	(*data) = calloc(size + 1, sizeof(char));
-	for(int i = 0; i < size; ++i){
-		printf("%d\n", i);
-		(*data)[i] = 'a';
-	}
-	// memset((*data), 'a', size * sizeof(char));
+	memset((*data), 'a', size * sizeof(char));
+}
+
+void writeData(char** data, char* filename){
+
+}
+void readData(char** data, char* filename){
+
 }
 
 
