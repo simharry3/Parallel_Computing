@@ -70,13 +70,13 @@ int main(int argc, char* argv[]){
 
 
 void generateData(int** data, int size){
-	printf("SIZEOF CHAR: %d\n", (int)sizeof(char));
+	// printf("SIZEOF CHAR: %d\n", (int)sizeof(char));
 	(*data) = calloc(size + 1, sizeof(char));
 	for(int i = 0; i < size; ++i){
 		printf("%d\n", i);
-		data[i] = 'a';
+		(*data)[i] = 'a';
 	}
-	// memset(temp, 'a', size * sizeof(char));
+	// memset((*data), 'a', size * sizeof(char));
 }
 
 
