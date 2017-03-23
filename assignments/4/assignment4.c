@@ -117,8 +117,8 @@ int main(int argc, char* argv[]){
 	// 	total_cycle = end_cycle - start_cycle;
 	// }
 	if(mpi_rank == 0){
-		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalWrite);
-		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalRead);
+		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalWrite/numExp);
+		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalRead/numExp);
 		fflush(NULL);
 
 	}
