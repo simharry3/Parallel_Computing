@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
 
 	if(argc == 5){
 		numFiles = strtol(argv[1], NULL, 10);
-		blockSize = strtol(argv[2], NULL, 10);
+		blockSize = strtol(argv[2], NULL, 10)*1024*1024;
 		numReadWrite = strtol(argv[3], NULL, 10);
 		numExp = strtol(argv[4], NULL, 10);
 	}
@@ -74,7 +74,6 @@ int main(int argc, char* argv[]){
 	sprintf(filename, "./data/datafile%d.dat", fileInfo);
 
 		
-	//printf("%s\n", filename);
 
 	for(int i = 0; i < numExp; ++i){
 		remove(filename);
