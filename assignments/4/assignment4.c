@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
 
 	if(argc == 5){
 		numFiles = strtol(argv[1], NULL, 10);
-		blockSize = strtol(argv[2], NULL, 10)*1024*1024;
+		blockSize = strtol(argv[2], NULL, 10);//*1024*1024;
 		numReadWrite = strtol(argv[3], NULL, 10);
 		numExp = strtol(argv[4], NULL, 10);
 	}
@@ -85,6 +85,7 @@ int main(int argc, char* argv[]){
 		}
 		for(int j = 0; j < numReadWrite; ++j){
 			writeData(&data, &mpiF);
+			printf("%s WRITES\n", data);
 		}
 		if(mpi_rank == 0){
 			totalWrite += MPI_Wtime(); - start_cycle;
@@ -99,6 +100,7 @@ int main(int argc, char* argv[]){
 		}
 		for(int j = 0; j < numReadWrite; ++j){
 			readData(&data, &mpiF);
+			printf("%s READ\n", data);
 		}
 		if(mpi_rank == 0){
 			totalRead += MPI_Wtime(); - start_cycle;
@@ -140,7 +142,7 @@ void writeData(char** data, MPI_File* mpiF){
 }
 
 
-void readData(char** data, MPI_File* mpiF){
+void readData(char** data, MPI_File* mpiF, int k){
 	MPI_Offset off = mpi_rank % (mpi_commsize/numFiles) * blockSize;
 	//ROMIO_CONST void *buf;
 	MPI_File_read_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
