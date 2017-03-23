@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 void generateData(char** data, int size);
-void writeData(char** data, MPI_File *mpiF);
-void readData(char** data, MPI_File *mpiF);
+void writeData(char** data, MPI_File *mpiF, int k);
+void readData(char** data, MPI_File *mpiF, int k);
 
 // Global Variables!
 int mpi_rank; 
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
 
 	if(argc == 5){
 		numFiles = strtol(argv[1], NULL, 10);
-		blockSize = strtol(argv[2], NULL, 10);//*1024*1024;
+		blockSize = strtol(argv[2], NULL, 10)*1024*1024;
 		numReadWrite = strtol(argv[3], NULL, 10);
 		numExp = strtol(argv[4], NULL, 10);
 	}
@@ -84,8 +84,7 @@ int main(int argc, char* argv[]){
 			start_cycle = MPI_Wtime();
 		}
 		for(int j = 0; j < numReadWrite; ++j){
-			writeData(&data, &mpiF);
-			printf("%s WRITES\n", data);
+			writeData(&data, &mpiF, j);
 		}
 		if(mpi_rank == 0){
 			totalWrite += MPI_Wtime(); - start_cycle;
@@ -99,8 +98,7 @@ int main(int argc, char* argv[]){
 			start_cycle = MPI_Wtime();
 		}
 		for(int j = 0; j < numReadWrite; ++j){
-			readData(&data, &mpiF);
-			printf("%s READ\n", data);
+			readData(&data, &mpiF, j);
 		}
 		if(mpi_rank == 0){
 			totalRead += MPI_Wtime(); - start_cycle;
@@ -118,8 +116,8 @@ int main(int argc, char* argv[]){
 	// 	total_cycle = end_cycle - start_cycle;
 	// }
 	if(mpi_rank == 0){
-		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalWrite/numExp);
-		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalRead/numExp);
+		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize, mpi_commsize, totalWrite/numExp);
+		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize, mpi_commsize, totalRead/numExp);
 		fflush(NULL);
 
 	}
@@ -135,15 +133,15 @@ void generateData(char** data, int size){
 	memset((*data), 'a', size * sizeof(char));
 }
 
-void writeData(char** data, MPI_File* mpiF){
-	MPI_Offset off = mpi_rank % (mpi_commsize/numFiles) * blockSize;
+void writeData(char** data, MPI_File* mpiF, int k){
+	MPI_Offset off = mpi_rank % (mpi_commsize/numFiles) * blockSize + (blockSize*k);
 	//ROMIO_CONST void *buf;
 	MPI_File_write_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
 
 
 void readData(char** data, MPI_File* mpiF, int k){
-	MPI_Offset off = mpi_rank % (mpi_commsize/numFiles) * blockSize;
+	MPI_Offset off = mpi_rank % (mpi_commsize/numFiles) * blockSize + (blockSize*k);
 	//ROMIO_CONST void *buf;
 	MPI_File_read_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
