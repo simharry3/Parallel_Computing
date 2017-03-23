@@ -15,13 +15,15 @@ void readData(char** data, MPI_File *mpiF);
 int mpi_rank; 
 int blockSize = 0;
 MPI_Status status;
+int mpi_commsize;
+int numFiles = 0;
 
 // ./a <Num Files> <Block Size> <Num Read/Write> <Num Experiments>
 int main(int argc, char* argv[]){
 
 	
-	int mpi_commsize;
-	int numFiles = 0;
+	
+
 	int numReadWrite = 0;
 	int numExp = 0;
 	//unsigned long long start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0; 
@@ -60,23 +62,25 @@ int main(int argc, char* argv[]){
 	// call all read and writes
 	char* data;
 	generateData(&data, blockSize);
-	for(int i = 0 ; i < blockSize; ++i){
-		printf("%c", data[i]);
-	}
-	printf("\n");
+
 
 	/////////////////////////
 	// MAIN EXPERIMENT 
 	/////////////////////////
 	mkdir("./data", 0700);
-	for(int i = 0; i < numExp; ++i){
-		for(int k = 0; k < numFiles; ++k){
-			char* filename = calloc(21, sizeof(char));
-			sprintf(filename, "./data/datafile%d.dat", k);
-			remove(filename);
-			MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &mpiF);
-		}
+	char* filename = calloc(21, sizeof(char));
+	int fileInfo = mpi_rank/(mpi_commsize/numFiles);
+	printf("%d\n", fileInfo);
+	sprintf(filename, "./data/datafile%d.dat", fileInfo);
+
 		
+	//printf("%s\n", filename);
+
+	for(int i = 0; i < numExp; ++i){
+		remove(filename);
+		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_File_open(MPI_COMM_SELF, filename, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &mpiF);
+
 
 		if(mpi_rank == 0){
 			start_cycle = MPI_Wtime();
@@ -118,7 +122,7 @@ int main(int argc, char* argv[]){
 		printf("%.2f \n", totalRead);
 
 	}
-
+	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_File_close(&mpiF);
 	MPI_Finalize();
 	exit(0);
@@ -131,14 +135,14 @@ void generateData(char** data, int size){
 }
 
 void writeData(char** data, MPI_File* mpiF){
-	MPI_Offset off = mpi_rank * blockSize;
+	MPI_Offset off = mpi_rank % (mpi_commsize/numFiles) * blockSize;
 	//ROMIO_CONST void *buf;
 	MPI_File_write_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
 
 
 void readData(char** data, MPI_File* mpiF){
-	MPI_Offset off = mpi_rank * blockSize;
+	MPI_Offset off = mpi_rank % (mpi_commsize/numFiles) * blockSize;
 	//ROMIO_CONST void *buf;
 	MPI_File_read_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
