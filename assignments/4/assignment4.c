@@ -117,8 +117,9 @@ int main(int argc, char* argv[]){
 	// 	total_cycle = end_cycle - start_cycle;
 	// }
 	if(mpi_rank == 0){
-		printf("%.2f \n", totalWrite);
-		printf("%.2f \n", totalRead);
+		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalWrite);
+		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blocksize, mpi_commsize, totalRead);
+		fflush(NULL);
 
 	}
 	MPI_Barrier(MPI_COMM_WORLD);
