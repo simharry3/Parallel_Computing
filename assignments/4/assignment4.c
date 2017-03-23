@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
 
 	//Open the file and record start time
 	MPI_File mpiF;
-	MPI_File_open(MPI_COMM_WORLD, "datafile", MPI_MODE_RDONLY, MPI_INFO_NULL, &mpiF);
+	MPI_File_open(MPI_COMM_WORLD, "datafile.dat", MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &mpiF);
 	
 
 
