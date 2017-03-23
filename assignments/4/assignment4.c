@@ -70,7 +70,6 @@ int main(int argc, char* argv[]){
 	mkdir("./data", 0700);
 	char* filename = calloc(21, sizeof(char));
 	int fileInfo = mpi_rank/(mpi_commsize/numFiles);
-	printf("%d\n", fileInfo);
 	sprintf(filename, "./data/datafile%d.dat", fileInfo);
 
 		
