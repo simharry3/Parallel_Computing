@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
 	int numReadWrite = 0;
 	int numExp = 0;
 	//unsigned long long start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0; 
-	double start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0;
+	double start_cycle = 0, totalRead = 0, totalWrite = 0;
 	
 
 	if(argc == 5){
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]){
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
 	// FILESIZE determines the size of the overall file in relation to the blocksize and commsize
-	int FILESIZE = blockSize * mpi_commsize;
+	// int FILESIZE = blockSize * mpi_commsize;
 	
 
 	// The three lines below may not be used
@@ -60,8 +60,8 @@ int main(int argc, char* argv[]){
 
 
 	// call all read and writes
-	char* data;
-	generateData(&data, blockSize);
+	char* dataOut;
+	generateData(&dataOut, blockSize);
 
 
 	/////////////////////////
@@ -84,10 +84,10 @@ int main(int argc, char* argv[]){
 			start_cycle = MPI_Wtime();
 		}
 		for(int j = 0; j < numReadWrite; ++j){
-			writeData(&data, &mpiF, j);
+			writeData(&dataOut, &mpiF, j);
 		}
 		if(mpi_rank == 0){
-			totalWrite += MPI_Wtime(); - start_cycle;
+			totalWrite += MPI_Wtime() - start_cycle;
 		}
 
 
@@ -98,23 +98,15 @@ int main(int argc, char* argv[]){
 			start_cycle = MPI_Wtime();
 		}
 		for(int j = 0; j < numReadWrite; ++j){
-			readData(&data, &mpiF, j);
+			readData(&dataOut, &mpiF, j);
 		}
 		if(mpi_rank == 0){
-			totalRead += MPI_Wtime(); - start_cycle;
+			totalRead += MPI_Wtime() - start_cycle;
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
 
 	}
-	/////////////////////////
-	// Find the total cycle and close the file
 
-	//All reduce does not work.. but we are told to use it we will figure it out.
-	//MPI_Allreduce(total_cycle);
-	// if(mpi_rank == 0){
-	// 	end_cycle = MPI_Wtime();
-	// 	total_cycle = end_cycle - start_cycle;
-	// }
 	if(mpi_rank == 0){
 		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize, mpi_commsize, totalWrite/numExp);
 		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize, mpi_commsize, totalRead/numExp);
