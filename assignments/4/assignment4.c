@@ -3,9 +3,13 @@
 #include <string.h>
 #include <mpi.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 void generateData(char** data, int size);
-void writeData(char** data, char* filename, MPI_File *mpiF);
-void readData(char** data, char* filename, MPI_File *mpiF);
+void writeData(char** data, MPI_File *mpiF);
+void readData(char** data, MPI_File *mpiF);
 
 // Global Variables!
 int mpi_rank; 
@@ -17,17 +21,15 @@ int main(int argc, char* argv[]){
 
 	
 	int mpi_commsize;
-
-	int numThreads = 0;
-
+	int numFiles = 0;
 	int numReadWrite = 0;
 	int numExp = 0;
 	//unsigned long long start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0; 
 	double start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0;
-	char* filename  = "carelessWhisper.mov";
+	
 
 	if(argc == 5){
-		numThreads = strtol(argv[1], NULL, 10);
+		numFiles = strtol(argv[1], NULL, 10);
 		blockSize = strtol(argv[2], NULL, 10);
 		numReadWrite = strtol(argv[3], NULL, 10);
 		numExp = strtol(argv[4], NULL, 10);
@@ -52,9 +54,7 @@ int main(int argc, char* argv[]){
 	//nints = bufsize/sizeof(int);
 
 	//Open the file and record start time
-	MPI_File mpiF;
-	MPI_File_open(MPI_COMM_WORLD, "datafile.dat", MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &mpiF);
-	
+	MPI_File mpiF;	
 
 
 	// call all read and writes
@@ -68,21 +68,36 @@ int main(int argc, char* argv[]){
 	/////////////////////////
 	// MAIN EXPERIMENT 
 	/////////////////////////
+	mkdir("./data", 0700);
 	for(int i = 0; i < numExp; ++i){
+		for(int k = 0; k < numFiles; ++k){
+			char* filename = calloc(21, sizeof(char));
+			sprintf(filename, "./data/datafile%d.dat", k);
+			remove(filename);
+			MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL, &mpiF);
+		}
+		
+
 		if(mpi_rank == 0){
 			start_cycle = MPI_Wtime();
 		}
-		writeData(&data, filename, &mpiF);
+		for(int j = 0; j < numReadWrite; ++j){
+			writeData(&data, &mpiF);
+		}
 		if(mpi_rank == 0){
 			totalWrite += MPI_Wtime(); - start_cycle;
 		}
+
+
 		MPI_Barrier(MPI_COMM_WORLD);
 
 
 		if(mpi_rank == 0){
 			start_cycle = MPI_Wtime();
 		}
-		readData(&data, filename, &mpiF);
+		for(int j = 0; j < numReadWrite; ++j){
+			readData(&data, &mpiF);
+		}
 		if(mpi_rank == 0){
 			totalRead += MPI_Wtime(); - start_cycle;
 		}
@@ -115,14 +130,14 @@ void generateData(char** data, int size){
 	memset((*data), 'a', size * sizeof(char));
 }
 
-void writeData(char** data, char* filename, MPI_File* mpiF){
+void writeData(char** data, MPI_File* mpiF){
 	MPI_Offset off = mpi_rank * blockSize;
 	//ROMIO_CONST void *buf;
 	MPI_File_write_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
 
 
-void readData(char** data, char* filename, MPI_File* mpiF){
+void readData(char** data, MPI_File* mpiF){
 	MPI_Offset off = mpi_rank * blockSize;
 	//ROMIO_CONST void *buf;
 	MPI_File_read_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
