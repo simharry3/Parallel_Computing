@@ -4,20 +4,26 @@
 #include <mpi.h>
 
 void generateData(char** data, int size);
-void writeData(char** data, char* filename);
-void readData(char** data, char* filename);
+void writeData(char** data, char* filename, MPI_File *mpiF);
+void readData(char** data, char* filename, MPI_File *mpiF);
+
+// Global Variables!
+int mpi_rank; 
+int blockSize = 0;
+MPI_Status status;
 
 // ./a <Num Files> <Block Size> <Num Read/Write> <Num Experiments>
 int main(int argc, char* argv[]){
 
-	int mpi_rank; 
+	
 	int mpi_commsize;
 
 	int numThreads = 0;
-	int blockSize = 0;
+
 	int numReadWrite = 0;
 	int numExp = 0;
-	unsigned int long long start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0;
+	//unsigned long long start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0; 
+	double start_cycle = 0, end_cycle = 0, totalRead = 0, totalWrite = 0;
 	char* filename  = "carelessWhisper.mov";
 
 	if(argc == 5){
@@ -48,7 +54,7 @@ int main(int argc, char* argv[]){
 	//Open the file and record start time
 	MPI_File mpiF;
 	MPI_File_open(MPI_COMM_WORLD, "datafile", MPI_MODE_RDONLY, MPI_INFO_NULL, &mpiF);
-	//start_cycle = GetTimeBase();
+	
 
 
 	// call all read and writes
@@ -63,23 +69,44 @@ int main(int argc, char* argv[]){
 	// MAIN EXPERIMENT 
 	/////////////////////////
 	for(int i = 0; i < numExp; ++i){
-		writeData(&data, filename);
+		if(mpi_rank == 0){
+			start_cycle = MPI_Wtime();
+		}
+		writeData(&data, filename, &mpiF);
+		if(mpi_rank == 0){
+			totalWrite += MPI_Wtime(); - start_cycle;
+		}
 		MPI_Barrier(MPI_COMM_WORLD);
-	}
-	MPI_Barrier(MPI_COMM_WORLD);
-	for(int i = 0; i < numExp; ++i){
-		readData(&data, filename);
+
+
+		if(mpi_rank == 0){
+			start_cycle = MPI_Wtime();
+		}
+		readData(&data, filename, &mpiF);
+		if(mpi_rank == 0){
+			totalRead += MPI_Wtime(); - start_cycle;
+		}
 		MPI_Barrier(MPI_COMM_WORLD);
+
 	}
 	/////////////////////////
 	// Find the total cycle and close the file
-	//end_cycle = GetTimeBase();
-	//total_cycle = end_cycle - start_cycle;
+
 	//All reduce does not work.. but we are told to use it we will figure it out.
 	//MPI_Allreduce(total_cycle);
-	MPI_File_close(&mpiF);
+	// if(mpi_rank == 0){
+	// 	end_cycle = MPI_Wtime();
+	// 	total_cycle = end_cycle - start_cycle;
+	// }
+	if(mpi_rank == 0){
+		printf("%.2f \n", totalWrite);
+		printf("%.2f \n", totalRead);
 
-	return 1;
+	}
+
+	MPI_File_close(&mpiF);
+	MPI_Finalize();
+	exit(0);
 }
 
 
@@ -88,11 +115,17 @@ void generateData(char** data, int size){
 	memset((*data), 'a', size * sizeof(char));
 }
 
-void writeData(char** data, char* filename){
-
+void writeData(char** data, char* filename, MPI_File* mpiF){
+	MPI_Offset off = mpi_rank * blockSize;
+	//ROMIO_CONST void *buf;
+	MPI_File_write_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
-void readData(char** data, char* filename){
 
+
+void readData(char** data, char* filename, MPI_File* mpiF){
+	MPI_Offset off = mpi_rank * blockSize;
+	//ROMIO_CONST void *buf;
+	MPI_File_read_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
 
 
