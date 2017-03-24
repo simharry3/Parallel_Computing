@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
 
 	if(argc == 5){
 		numFiles = strtol(argv[1], NULL, 10);
-		blockSize = strtol(argv[2], NULL, 10);//*1024*1024;
+		blockSize = strtol(argv[2], NULL, 10) * 1048576;
 		numReadWrite = strtol(argv[3], NULL, 10);
 		numExp = strtol(argv[4], NULL, 10);
 	}
@@ -80,6 +80,7 @@ int main(int argc, char* argv[]){
 	mkdir("./data", 0700);
 	char* filename = calloc(21, sizeof(char));
 	int fileInfo = mpi_rank/(mpi_commsize/numFiles);
+	// printf("RANK %d: FILE: %d\n", mpi_rank, fileInfo);
 	sprintf(filename, "./data/datafile%d.dat", fileInfo);
 
 		
@@ -138,14 +139,15 @@ void generateData(char** data, int size){
 void writeData(char** data, MPI_File* mpiF, int k){
 	//ranks/file * blockSize
 	//MPI_Offset off = mpi_rank % ((mpi_commsize/numFiles) * blockSize) + (blockSize*k);
-	MPI_Offset off = mpi_rank * blockSize * numReadWrite + blockSize * k;
+	MPI_Offset off = ((mpi_rank % (mpi_commsize/numFiles)) * numReadWrite * blockSize) + (blockSize * k);
+	// printf("RANK %d: WRITE: %d OFFSET: %lld\n", mpi_rank, k, off);
 	//ROMIO_CONST void *buf;
 	MPI_File_write_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
 
 
 void readData(char** data, MPI_File* mpiF, int k){
-	MPI_Offset off = (mpi_rank % (mpi_commsize/numFiles) * blockSize) + (blockSize*k);
+	MPI_Offset off = ((mpi_rank % (mpi_commsize/numFiles)) * numReadWrite * blockSize) + (blockSize * k);
 	//ROMIO_CONST void *buf;
 	MPI_File_read_at_all(*mpiF, off, *data, blockSize, MPI_CHAR, &status);
 }
