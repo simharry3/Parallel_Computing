@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
 
 	if(argc == 5){
 		numFiles = strtol(argv[1], NULL, 10);
-		blockSize = strtol(argv[2], NULL, 10) * 1048576;
+		blockSize = strtol(argv[2], NULL, 10) * 1024;
 		numReadWrite = strtol(argv[3], NULL, 10);
 		numExp = strtol(argv[4], NULL, 10);
 	}
@@ -119,8 +119,8 @@ int main(int argc, char* argv[]){
 	}
 
 	if(mpi_rank == 0){
-		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize/1048576, mpi_commsize, totalWrite/numExp);
-		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize/1048576, mpi_commsize, totalRead/numExp);
+		printf("Write Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize/1024, mpi_commsize, totalWrite/numExp);
+		printf("Read Time -- Files: %d, Block: %d, Comm: %d, Time: %.2f \n", numFiles, blockSize/1024, mpi_commsize, totalRead/numExp);
 		fflush(NULL);
 
 	}
