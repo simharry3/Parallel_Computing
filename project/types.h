@@ -27,5 +27,6 @@ typedef struct state{
     //ADD STATE
 }state;
 
+void initParticle(particle* p);
 void initState(state* st, context* ctx);
 #endif /*TYPES_H_*/
