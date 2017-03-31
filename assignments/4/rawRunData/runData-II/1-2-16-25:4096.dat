@@ -1,0 +1,3 @@
+srun: got SIGCONT
+slurmstepd: *** JOB 695059 ON q CANCELLED AT 2017-03-28T04:04:53 ***
+srun: forcing job termination

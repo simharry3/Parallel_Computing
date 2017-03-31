@@ -1,0 +1,4 @@
+srun: error: *** STEP 694671.0 CANCELLED AT 2017-03-27T20:49:39 DUE TO TIME LIMIT ***
+slurmstepd: *** JOB 694671 ON q CANCELLED AT 2017-03-27T20:49:39 DUE TO TIME LIMIT ***
+srun: got SIGCONT
+srun: forcing job termination
