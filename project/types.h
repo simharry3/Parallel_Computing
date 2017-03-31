@@ -22,11 +22,15 @@ typedef struct context{
 }context;
 
 typedef struct state{
+    uint numParticles;
     particle* ptab;
     particle* ctab;
     //ADD STATE
 }state;
 
 void initParticle(particle* p);
-void initState(state* st, context* ctx);
+void printParticle(particle* p);
+
+void initState(state* st);
+void printState(state* st);
 #endif /*TYPES_H_*/
