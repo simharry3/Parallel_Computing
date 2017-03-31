@@ -1,4 +1,4 @@
-CC = g++
+CC = gcc
 CFLAGS = -I.
 DEPS = particle.h
 
@@ -6,4 +6,4 @@ DEPS = particle.h
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 all: particle.o simulation.o 
-	g++ -o simulation simulation.o particle.o $(CFLAGS)
+	$(CC) -o simulation simulation.o particle.o $(CFLAGS)

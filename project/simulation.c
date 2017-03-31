@@ -1,10 +1,9 @@
-#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 
 using namespace std;
 int main(int argc, char* argv[]){
-    cout << "HERE WE GO.\n";
-
-
+    printf("HERE WE GO\n");
 
     exit(0);
 }
