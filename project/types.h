@@ -22,7 +22,6 @@ typedef struct context{
 }context;
 
 typedef struct state{
-    uint numParticles;
     particle* ptab;
     particle* ctab;
     //ADD STATE
@@ -31,6 +30,7 @@ typedef struct state{
 void initParticle(particle* p);
 void printParticle(particle* p);
 
-void initState(state* st);
-void printState(state* st);
+void initContext(context* ctx);
+void initState(state* st, context* ctx);
+void printState(state* st, context* ctx);
 #endif /*TYPES_H_*/
