@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h> //Needed for RNG 
 
 typedef double real;
 
@@ -19,6 +20,8 @@ typedef struct particle{
 
 typedef struct context{
     uint numParticles;
+    int* max;
+    char* checkpointFile;
 }context;
 
 typedef struct state{
@@ -27,7 +30,7 @@ typedef struct state{
     //ADD STATE
 }state;
 
-void initParticle(particle* p, int id);
+void initParticle(particle* p, int* pos, int id);
 void printParticle(particle* p);
 
 void initContext(context** ctx);
