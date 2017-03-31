@@ -27,10 +27,10 @@ typedef struct state{
     //ADD STATE
 }state;
 
-void initParticle(particle* p);
+void initParticle(particle* p, int id);
 void printParticle(particle* p);
 
-void initContext(context* ctx);
-void initState(state* st, context* ctx);
+void initContext(context** ctx);
+void initState(state** st, context* ctx);
 void printState(state* st, context* ctx);
 #endif /*TYPES_H_*/
