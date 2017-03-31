@@ -1,2 +1,9 @@
-all: simulation.cpp
-	g++ simulation.cpp -o simulation
+CC = g++
+CFLAGS = -I.
+DEPS = particle.h
+
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+all: particle.o simulation.o 
+	g++ -o simulation simulation.o particle.o $(CFLAGS)
