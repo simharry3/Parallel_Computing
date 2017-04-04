@@ -14,11 +14,43 @@ void printParticle(particle* p){
                                      p->position.y, p->position.z);
 }
 
+void updateParticlePosition(particle* p){
+    int num = rand() % 6;
+    int dx, dy, dz;
+    dx = dy = dz = 0;
+    printf(">>>>>>>%d\n", num);
+    switch(num){
+        case 0:
+            dx = -1;
+            break;
+        case 1:
+            dx = 1;
+            break;
+        case 2:
+            dy = -1;
+            break;
+        case 3:
+            dy = 1;
+            break;
+        case 4:
+            dz = -1;
+            break;
+        case 5:
+            dz = 1;
+            break;
+    }
 
-void initContext(context** ctx){
+    p->position.x += dx;
+    p->position.y += dy;
+    p->position.z += dz;
+}
+
+
+void initContext(context** ctx, int* data){
     *ctx = calloc(1, sizeof(context));
     (*ctx)->max = calloc(3, sizeof(int));
-    (*ctx)->numParticles = 10;
+    (*ctx)->numParticles = data[0];
+    (*ctx)->numSteps = data[1];
     (*ctx)->max[0] = 100;
     (*ctx)->max[1] = 100;
     (*ctx)->max[2] = 100;
@@ -26,8 +58,9 @@ void initContext(context** ctx){
 
 void initState(state** st, context* ctx){
     *st = calloc(1, sizeof(state));
-    int* pos = (int*)calloc(3, sizeof(int));time_t t;
-
+    int* pos = (int*)calloc(3, sizeof(int));
+    
+    time_t t;
     srand((unsigned) time(&t));
 
     (*st)->ptab = calloc(ctx->numParticles, sizeof(particle));
