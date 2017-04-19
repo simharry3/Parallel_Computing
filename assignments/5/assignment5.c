@@ -25,10 +25,12 @@
 
 #define ALIVE 1
 #define DEAD  0
-#define DEBUG 0
+#define DEBUG 1
 //8192
-#define WIDTH 8192
-#define HEIGHT 8192
+#define WIDTH 512
+#define HEIGHT 512
+
+#define DEFAULT_PTHREADS 0
 
 #define EVOLVE_TIME 100
 
@@ -41,6 +43,13 @@
 /***************************************************************************/
 
 // You define these
+typedef struct{
+    int** cellData;
+    int threshold;
+    int pThreadsPerNode;
+    pthread_mutex_t* mutex;
+}gameData;
+
 int** universeCheckpoint;
 
 
@@ -49,11 +58,9 @@ int** universeCheckpoint;
 /***************************************************************************/
 
 //Board Functions
-void initBoard();
-void populateBoard();
-void populateRow();
-
-void destroyBoard();
+void* initBoard();
+void* populateBoard();
+void* destroyBoard();
 
 //Runtime Functions
 void updateCells();
@@ -72,6 +79,7 @@ int main(int argc, char *argv[])
 //    int i = 0;
     int mpi_myrank;
     int mpi_commsize;
+    int pid;
 // Example MPI startup and using CLCG4 RNG
     MPI_Init( &argc, &argv);
     MPI_Comm_size( MPI_COMM_WORLD, &mpi_commsize);
@@ -84,52 +92,63 @@ int main(int argc, char *argv[])
 // This just show you how to call the RNG.    
     
 // Insert your code
+
+    ////////////////////////////////////
+    //USER INPUT TO STREAMLINE TESTING:
     int thresh = THRESHOLD;
-    if(argc == 2){
+    int numThreads = DEFAULT_PTHREADS;
+    if(argc == 3){
         thresh = strtol(argv[1], NULL, 10);
+        numThreads = strtol(argv[2], NULL, 10);
     }
-    //printf("THRESHOLD: %d\n", thresh);
+    ///////////////////////////////////
+    
     int start = 0;
     if(mpi_myrank == 0){
         start = MPI_Wtime();
     }
     int** gameBoard = NULL;
+    gameData* gData = NULL;
 
     universeCheckpoint = calloc(HEIGHT, sizeof(int*));
     for(int i = 0; i < HEIGHT; ++i){
         universeCheckpoint[i] = calloc(WIDTH, sizeof(int));
     }
 
-    initBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
+    initBoard(&gData);
+    gData->threshold = thresh;
+    gData->pThreadsPerNode = numThreads; 
+
+    // MPI_Barrier( MPI_COMM_WORLD );
+
+    // populateBoard(&gameBoard);
+
+    // MPI_Barrier( MPI_COMM_WORLD );
+
+
+    // //MAIN LOOP WHICH RUNS THE PROGRAM:
+    // for(int i = 0; i < EVOLVE_TIME; ++i){
+    //     if(DEBUG){
+    //         printf("RANK %d: Timestep: %d\n", mpi_myrank, i);
+    //     }
+    //     updateGhostData(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
+    //     MPI_Barrier(MPI_COMM_WORLD); //barrier here to make sure all ghost data is up to date
+    //     updateCells(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, thresh);
+    //     MPI_Barrier(MPI_COMM_WORLD);
+    //     if(DEBUG){
+    //         printf("=========================\n");
+    //         fflush(NULL);
+    //         MPI_Barrier(MPI_COMM_WORLD);
+    //     }
+    //     if(i % CHECKPOINT_INTERVAL == 0){
+    //         writeCheckpoint(&gameBoard, &universeCheckpoint, mpi_myrank, HEIGHT/mpi_commsize);
+    //         MPI_Barrier(MPI_COMM_WORLD);
+    //     }
+    // }
+
 
     MPI_Barrier( MPI_COMM_WORLD );
-
-    populateBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, thresh);
-
-    MPI_Barrier( MPI_COMM_WORLD );
-
-    for(int i = 0; i < EVOLVE_TIME; ++i){
-        if(DEBUG){
-            printf("RANK %d: Timestep: %d\n", mpi_myrank, i);
-        }
-        updateGhostData(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
-        MPI_Barrier(MPI_COMM_WORLD); //barrier here to make sure all ghost data is up to date
-        updateCells(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize, thresh);
-        MPI_Barrier(MPI_COMM_WORLD);
-        if(DEBUG){
-            printf("=========================\n");
-            fflush(NULL);
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-        if(i % CHECKPOINT_INTERVAL == 0){
-            writeCheckpoint(&gameBoard, &universeCheckpoint, mpi_myrank, HEIGHT/mpi_commsize);
-            MPI_Barrier(MPI_COMM_WORLD);
-        }
-    }
-
-
-    MPI_Barrier( MPI_COMM_WORLD );
-    destroyBoard(&gameBoard, mpi_myrank, HEIGHT/mpi_commsize);
+    destroyBoard(&gData);
 
 // END -Perform a barrier and then leave MPI
     MPI_Barrier( MPI_COMM_WORLD );
@@ -147,37 +166,58 @@ int main(int argc, char *argv[])
 /***************************************************************************/
 
 
-void initBoard(int*** gameBoard, int rank, int rowsPerRank){
-    *gameBoard = calloc(rowsPerRank + 2, sizeof(int*));
+void* initBoard(gameData** gData){
+    int rank, commSize, rowsPerRank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+    rowsPerRank = HEIGHT/commSize;
+
+    // printf("RPR: %d H: %d cS: %d\n", rowsPerRank, HEIGHT, commSize);
+    *gData = calloc(1, sizeof(gameData));
+    (*gData)->cellData = calloc(rowsPerRank + 2, sizeof(int*));
     for(int i = 0; i < rowsPerRank + 2; ++i){
         if(DEBUG){
             printf("RANK %d: INIT ROW %d\n", rank, rank * rowsPerRank + i);
         }
-        (*gameBoard)[i] = calloc(WIDTH, sizeof(int));
+        (*gData)->cellData[i] = calloc(WIDTH, sizeof(int));
     }
+
+    return NULL;
 }
 
-void destroyBoard(int*** gameBoard, int rank, int rowsPerRank){
+void* destroyBoard(gameData** gData){
+    int rank, commSize, rowsPerRank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+    rowsPerRank = HEIGHT/commSize;
+
     for(int i = 0; i < rowsPerRank + 2; ++i){
         if(DEBUG){
             printf("RANK %d: DESTROY ROW %d\n", rank, rank * rowsPerRank + i);
             fflush(NULL);
         }
-       free((*gameBoard)[i]);
+       free((*gData)->cellData[i]);
     }
-    free(*gameBoard);
+    free(*gData);
+    return NULL;
 }
 
 
-void populateBoard(int*** gameBoard, int rank, int rowsPerRank, int threshold){
+void* populateBoard(gameData** gData){
+    int rank, commSize, rowsPerRank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+    rowsPerRank = HEIGHT/commSize;
+
     for(int i = 1; i < rowsPerRank; ++i){
         if(DEBUG){
             printf("RANK %d: POPULATING ROW %d\n", rank, rank * rowsPerRank + i);
         }
         for(int j = 0; j < WIDTH; ++j){
-            (*gameBoard)[i][j] = (GenVal(rank * rowsPerRank + i) * 100 > threshold) ? ALIVE : DEAD;
+            (*gData)->cellData[i][j] = (GenVal(rank * rowsPerRank + i) * 100 > (*gData)->threshold) ? ALIVE : DEAD;
         }
     }
+    return NULL;
 }
 
 int wrapHorizontalIndex(int index){
