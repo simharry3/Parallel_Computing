@@ -27,8 +27,8 @@
 #define DEAD  0
 #define DEBUG 0
 //8192
-#define WIDTH 16
-#define HEIGHT 16
+#define WIDTH 1024
+#define HEIGHT 1024
 
 #define DEFAULT_PTHREADS 1
 
@@ -83,7 +83,6 @@ int main(int argc, char *argv[])
 //    int i = 0;
     int mpi_myrank;
     int mpi_commsize;
-    int pid;
 // Example MPI startup and using CLCG4 RNG
     MPI_Init( &argc, &argv);
     MPI_Comm_size( MPI_COMM_WORLD, &mpi_commsize);
@@ -115,31 +114,47 @@ int main(int argc, char *argv[])
     }
 
 
-    ////////////////////////////////////
-    //Initialize Pthread Barrier:
-    int rc;
-    rc = pthread_barrier_init(&barrier, NULL, numThreads);
+    if(numThreads != 0){
+        ////////////////////////////////////
+        //Initialize Pthread Barrier:
+        int rc;
+        rc = pthread_barrier_init(&barrier, NULL, numThreads);
+        ////////////////////////////////////
 
-    ////////////////////////////////////
-    //Initialize Pthreads:
-    pthread_t* threads = calloc(numThreads, sizeof(pthread_t));
-    int* threadNums = calloc(numThreads, sizeof(int));
-    for(int i = 0; i < numThreads; ++i){
-        printf("Creating Pthread %d\n", i);
-        threadNums[i] = i;
-        fflush(NULL);
-        rc = pthread_create(&threads[i], NULL, xzibit, (void*) &(threadNums[i]));
-        if(rc){
-            printf("ERROR: %d IN PTHREAD CREATE\n", rc);
-            exit(-1);
+        ////////////////////////////////////
+        //Initialize Pthreads:
+        pthread_t* threads = calloc(numThreads, sizeof(pthread_t));
+        int* threadNums = calloc(numThreads, sizeof(int));
+        for(int i = 0; i < numThreads; ++i){
+            // printf("Creating Pthread %d\n", i);
+            threadNums[i] = i;
+            fflush(NULL);
+            rc = pthread_create(&threads[i], NULL, xzibit, (void*) &(threadNums[i]));
+            if(rc){
+                printf("ERROR: %d IN PTHREAD CREATE\n", rc);
+                exit(-1);
+            }
+        }
+        /////////////////////////////////////
+
+        for(int i = 0; i < numThreads; ++i){
+            rc = pthread_join(threads[i], NULL);
+            if(1){
+                // printf("JOINED THREAD %d\n", threadNums[i]);
+                fflush(NULL);
+            }
+            if(rc){
+                printf("ERROR %d IN PTHREAD JOIN\n", rc);
+                fflush(NULL);
+                exit(-1);
+            }
         }
     }
-    /////////////////////////////////////
-
-    for(int i = 0; i < numThreads; ++i){
-        pthread_join(threads[i], NULL);
+    else{
+        xzibit(&numThreads);
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
     double end;
     if(mpi_myrank == 0){
         end = MPI_Wtime();
@@ -147,7 +162,12 @@ int main(int argc, char *argv[])
     }
     
     MPI_Finalize();
-    pthread_exit(NULL);
+    if(numThreads != 0){
+        pthread_exit(NULL);
+    }
+    else{
+        exit(0);
+    }
 }
 
 /***************************************************************************/
@@ -161,22 +181,29 @@ void* initBoard(void* arg, int pid){
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     rowsPerRank = HEIGHT/commSize;
-    rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    if((*gData)->pThreadsPerNode != 0){
+        rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    }
+    else{
+        rowsPerThread = rowsPerRank;
+    }
 
     // printf("RPT: %d H: %d cS: %d\n", rowsPerThread, HEIGHT, commSize);
-    printf("RANK %d THREAD %d: PRE BARRIER\n", rank, pid);
-    fflush(NULL);    
+    // printf("RANK %d THREAD %d: PRE BARRIER\n", rank, pid);
+    // fflush(NULL);    
     if(pid == 0){
         (*gData)->cellData = calloc(rowsPerRank + 2, sizeof(int*));
         (*gData)->cellData[0] = calloc(WIDTH, sizeof(int));
         (*gData)->cellData[rowsPerRank + 1] = calloc(WIDTH, sizeof(int));
-        printf("RANK %d THREAD %d: INIT GHOST ROW %d\n", rank, pid, 0);
-        printf("RANK %d THREAD %d: INIT GHOST ROW %d\n", rank, pid, rowsPerRank + 1);
+        // printf("RANK %d THREAD %d: INIT GHOST ROW %d\n", rank, pid, 0);
+        // printf("RANK %d THREAD %d: INIT GHOST ROW %d\n", rank, pid, rowsPerRank + 1);
         fflush(NULL);
     }
-    pthread_barrier_wait(&barrier);
-    printf("RANK %d THREAD %d: POST BARRIER\n", rank, pid);
-    fflush(NULL);
+    if((*gData)->pThreadsPerNode != 0){
+        pthread_barrier_wait(&barrier);
+    }
+    // printf("RANK %d THREAD %d: POST BARRIER\n", rank, pid);
+    // fflush(NULL);
 
     for(int i = rowsPerThread * pid + 1; i < rowsPerThread * pid + rowsPerThread + 1; ++i){
         if(DEBUG){
@@ -195,7 +222,12 @@ void* destroyBoard(void* arg, int pid){
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     rowsPerRank = HEIGHT/commSize;
-    rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    if((*gData)->pThreadsPerNode != 0){
+        rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    }
+    else{
+        rowsPerThread = rowsPerRank;
+    }
 
     for(int i = rowsPerThread * pid + 1; i < rowsPerThread * pid + rowsPerThread + 1; ++i){
         if(DEBUG){
@@ -204,7 +236,9 @@ void* destroyBoard(void* arg, int pid){
         }
        free((*gData)->cellData[i]);
     }
-    pthread_barrier_wait(&barrier);
+    if((*gData)->pThreadsPerNode != 0){
+        pthread_barrier_wait(&barrier);
+    }
     if(pid == 0){
         free((*gData)->cellData[0]);
         free((*gData)->cellData[rowsPerRank + 1]);
@@ -220,7 +254,12 @@ void* populateBoard(void* arg, int pid){
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     rowsPerRank = HEIGHT/commSize;
-    rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    if((*gData)->pThreadsPerNode != 0){
+        rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    }
+    else{
+        rowsPerThread = rowsPerRank;
+    }
 
     for(int i = rowsPerThread * pid + 1; i < rowsPerThread * pid + rowsPerThread + 1; ++i){
         if(DEBUG){
@@ -260,7 +299,12 @@ void* updateCells(void* arg, int pid){
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     rowsPerRank = HEIGHT/commSize;
-    rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    if((*gData)->pThreadsPerNode != 0){
+        rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
+    }
+    else{
+        rowsPerThread = rowsPerRank;
+    }
 
     int* neighbors = calloc(8, sizeof(int));
     for(int i = rowsPerThread * pid + 1; i < rowsPerThread * pid + rowsPerThread + 1; ++i){
@@ -319,11 +363,10 @@ int checkCondition(int* neighbors, int condition){
 
 void* updateGhostData(void* arg, int pid){
     gameData** gData = (gameData**)arg;
-    int rank, commSize, rowsPerRank, rowsPerThread;
+    int rank, commSize, rowsPerRank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
     rowsPerRank = HEIGHT/commSize;
-    rowsPerThread = rowsPerRank/(*gData)->pThreadsPerNode;
 
     MPI_Request request[4];
     if(DEBUG){
@@ -365,29 +408,37 @@ void* writeCheckpoint(void* arg){
     return NULL;
 }
 
+void pthread_mpi_barrier(int pid){
+    if(pid == 0){
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    if(gData->pThreadsPerNode != 0){
+        pthread_barrier_wait(&barrier);
+    }
+}
+
 
 //Main wrapper function for pthreads. Xzibit. Get it? haha. ha. 
 void* xzibit (void* arg){
     int* temp = (int*)arg;
-    int tid = *temp;
-    printf("MY PID IS: %d\n", tid);
+    int pid = *temp;
+    // printf("MY PID IS: %d\n", pid);
     fflush(NULL);
-    int rank, commSize, rowsPerRank;
+    int rank, commSize;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &commSize);
-    rowsPerRank = HEIGHT/commSize;
     
 
-    initBoard(&gData, tid);
+    initBoard(&gData, pid);
 
     //Synchronize threads after initialization of the game board struct
     // MPI_Barrier( MPI_COMM_WORLD );
-    pthread_barrier_wait(&barrier);
-   
-    populateBoard(&gData, tid);
+    pthread_mpi_barrier(pid);
+
+    populateBoard(&gData, pid);
 
     //Synchronize threads after population of game boards
-    pthread_barrier_wait(&barrier);
+    pthread_mpi_barrier(pid);
     // MPI_Barrier( MPI_COMM_WORLD );
 
 
@@ -397,19 +448,19 @@ void* xzibit (void* arg){
             printf("RANK %d: Timestep: %d\n", rank, i);
             fflush(NULL);
         }
-        updateGhostData(&gData, tid);
-        pthread_barrier_wait(&barrier);
+        updateGhostData(&gData, pid);
+        pthread_mpi_barrier(pid);
         // MPI_Barrier(MPI_COMM_WORLD);
         // MPI_Barrier(MPI_COMM_WORLD); //barrier here to make sure all ghost data is up to date
-        updateCells(&gData, tid);
-        pthread_barrier_wait(&barrier);
+        updateCells(&gData, pid);
         // MPI_Barrier(MPI_COMM_WORLD);
         if(DEBUG){
             printf("=========================\n");
             fflush(NULL);
             // MPI_Barrier(MPI_COMM_WORLD);
         }
-        pthread_barrier_wait(&barrier);
+
+        pthread_mpi_barrier(pid);
         // MPI_Barrier(MPI_COMM_WORLD);
         // //CHECKPOINTING:
         // if(i % CHECKPOINT_INTERVAL == 0){
@@ -419,14 +470,15 @@ void* xzibit (void* arg){
     }
 
 
-    // MPI_Barrier( MPI_COMM_WORLD );
-    pthread_barrier_wait(&barrier);
+    pthread_mpi_barrier(pid);
     // MPI_Barrier(MPI_COMM_WORLD);
-    destroyBoard(&gData, tid);
-    //Synchronize threads after game board destruction
-    // MPI_Barrier(MPI_COMM_WORLD);
+    destroyBoard(&gData, pid);
 
-// END -Perform a barrier and then leave function
-    // MPI_Barrier( MPI_COMM_WORLD );
-    pthread_exit(NULL);
+    pthread_mpi_barrier(pid);
+    if(gData->pThreadsPerNode != 0){
+        pthread_exit(NULL);
+    }
+    else{
+        return NULL;
+    }
 }
