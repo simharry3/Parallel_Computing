@@ -26,11 +26,13 @@
 #define ALIVE 1
 #define DEAD  0
 #define DEBUG 0
+#define HUMAN_OUTPUT 0
 //8192
-#define WIDTH 1024
-#define HEIGHT 1024
+#define WIDTH 512
+#define HEIGHT 512
 
 #define DEFAULT_PTHREADS 1
+#define DEFAULT_NODES 1
 
 #define EVOLVE_TIME 100
 
@@ -47,6 +49,7 @@ typedef struct{
     int** cellData;
     int threshold;
     int pThreadsPerNode;
+    int nNodes;
     pthread_mutex_t* mutex;
 }gameData;
 
@@ -94,9 +97,12 @@ int main(int argc, char *argv[])
     //USER INPUT TO STREAMLINE TESTING:
     int thresh = THRESHOLD;
     int numThreads = DEFAULT_PTHREADS;
-    if(argc == 3){
+    int nodes = DEFAULT_NODES;
+    if(argc == 4){
         thresh = strtol(argv[1], NULL, 10);
         numThreads = strtol(argv[2], NULL, 10);
+        nodes = strtol(argv[3], NULL, 10);
+
     }
     ///////////////////////////////////
 
@@ -107,6 +113,7 @@ int main(int argc, char *argv[])
     gData = calloc(1, sizeof(gData));
     gData->threshold = thresh;
     gData->pThreadsPerNode = numThreads; 
+    gData->nNodes = nodes;
 
     universeCheckpoint.cellData = calloc(HEIGHT, sizeof(int*));
     for(int i = 0; i < HEIGHT; ++i){
@@ -158,7 +165,12 @@ int main(int argc, char *argv[])
     double end;
     if(mpi_myrank == 0){
         end = MPI_Wtime();
-        printf("RANKS: %d, THRESHOLD: %d, RUNNING TIME: %f\n", mpi_commsize, thresh, end - start);
+        if(HUMAN_OUTPUT){
+            printf("RANKS: %d, THRESHOLD: %d, RUNNING TIME: %f\n", mpi_commsize, thresh, end - start);
+        }
+        else{
+            printf("%d %d %d %d %f\n", thresh, gData->pThreadsPerNode, mpi_commsize, gData->nNodes, end - start);
+        }
     }
     
     MPI_Finalize();
