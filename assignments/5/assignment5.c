@@ -25,11 +25,13 @@
 
 #define ALIVE 1
 #define DEAD  0
+
+//These are flags that allow me to change the output formatting
 #define DEBUG 1
 #define HUMAN_OUTPUT 0
 //8192
-#define WIDTH 16
-#define HEIGHT 16
+#define WIDTH 1024
+#define HEIGHT 1024
 
 #define DEFAULT_PTHREADS 1
 #define DEFAULT_NODES 1
@@ -44,14 +46,13 @@
 /* Global Vars *************************************************************/
 /***************************************************************************/
 
-// You define these
+//Struct that keeps the simulation data together:
 typedef struct{
     int** cellData;
     int threshold;
     int pThreadsPerNode;
     int nNodes;
-    pthread_mutex_t topMutex;
-    pthread_mutex_t bottomMutex;
+    pthread_mutex_t* mutex;  
 }gameData;
 
 gameData* gData;
@@ -111,12 +112,12 @@ int main(int argc, char *argv[])
     if(mpi_myrank == 0){
         start = MPI_Wtime();
     }
+
+    //PREPARE ALL GLOBAL VARIABLES
     gData = calloc(1, sizeof(gData));
     gData->threshold = thresh;
     gData->pThreadsPerNode = numThreads; 
     gData->nNodes = nodes;
-    // pthread_mutex_init(&(gData->bottomMutex), NULL);
-    // pthread_mutex_init(&(gData->topMutex), NULL);
 
     universeCheckpoint.cellData = calloc(HEIGHT, sizeof(int*));
     for(int i = 0; i < HEIGHT; ++i){
@@ -164,6 +165,8 @@ int main(int argc, char *argv[])
         xzibit(&numThreads);
     }
 
+
+    //CLEAN UP PROGRAM, PRINT RESULTS, AND PREP TO EXIT:
     MPI_Barrier(MPI_COMM_WORLD);
     double end;
     if(mpi_myrank == 0){
@@ -175,9 +178,6 @@ int main(int argc, char *argv[])
             printf("%d %d %d %d %f\n", thresh, gData->pThreadsPerNode, mpi_commsize, gData->nNodes, end - start);
         }
     }
-    
-    // pthread_mutex_destroy(&(gData->bottomMutex));
-    // pthread_mutex_destroy(&(gData->topMutex));
 
     MPI_Finalize();
     if(numThreads != 0){
@@ -193,6 +193,7 @@ int main(int argc, char *argv[])
 /***************************************************************************/
 
 
+//This function initializes the board to prep for simulation
 void* initBoard(void* arg, int pid){
     gameData** gData = (gameData**)arg;
     int rank, commSize, rowsPerRank, rowsPerThread;
@@ -206,22 +207,15 @@ void* initBoard(void* arg, int pid){
         rowsPerThread = rowsPerRank;
     }
 
-    // printf("RPT: %d H: %d cS: %d\n", rowsPerThread, HEIGHT, commSize);
-    // printf("RANK %d THREAD %d: PRE BARRIER\n", rank, pid);
-    // fflush(NULL);    
     if(pid == 0){
         (*gData)->cellData = calloc(rowsPerRank + 2, sizeof(int*));
         (*gData)->cellData[0] = calloc(WIDTH, sizeof(int));
         (*gData)->cellData[rowsPerRank + 1] = calloc(WIDTH, sizeof(int));
-        // printf("RANK %d THREAD %d: INIT GHOST ROW %d\n", rank, pid, 0);
-        // printf("RANK %d THREAD %d: INIT GHOST ROW %d\n", rank, pid, rowsPerRank + 1);
         fflush(NULL);
     }
     if((*gData)->pThreadsPerNode != 0){
         pthread_barrier_wait(&barrier);
     }
-    // printf("RANK %d THREAD %d: POST BARRIER\n", rank, pid);
-    // fflush(NULL);
 
     for(int i = rowsPerThread * pid + 1; i < rowsPerThread * pid + rowsPerThread + 1; ++i){
         if(DEBUG){
@@ -234,6 +228,8 @@ void* initBoard(void* arg, int pid){
     return NULL;
 }
 
+
+//Like init, but opposite. This function destroys the gameboard after simulation
 void* destroyBoard(void* arg, int pid){
     gameData** gData = (gameData**)arg;
     int rank, commSize, rowsPerRank, rowsPerThread;
@@ -266,6 +262,8 @@ void* destroyBoard(void* arg, int pid){
 }
 
 
+//This function is used to populate the board before the simulation, 
+//but after initialization with RNG values
 void* populateBoard(void* arg, int pid){
     gameData** gData = (gameData**)arg;
     int rank, commSize, rowsPerRank, rowsPerThread;
@@ -291,6 +289,8 @@ void* populateBoard(void* arg, int pid){
     return NULL;
 }
 
+
+//Some helper functions to ease the calculation of wrap-arounds and clean up the code:
 int wrapHorizontalIndex(int index){
     if(index == -1){
         return WIDTH - 1;
@@ -311,6 +311,10 @@ int wrapRank(int rank, int rowsPerRank){
     return rank;
 }
 
+//Custom barrier function to handle cases where no pthreads are running.
+//I noticed MPI_Barrier freezes program when multiple pthreads call it, so what I do is
+//create an MPI_Barrier on the 0th pid, then perform a pthread barrier.
+//This hybrid barrier allows me to synchronize both pthreads and MPI ranks without hanging the program
 void pthread_mpi_barrier(int pid){
     if(pid == 0){
         MPI_Barrier(MPI_COMM_WORLD);
@@ -320,6 +324,7 @@ void pthread_mpi_barrier(int pid){
     }
 }
 
+//This function updates the cells during the simulation based on their neighbors:
 void* updateCells(void* arg, int pid){
     gameData** gData = (gameData**)arg;
     int rank, commSize, rowsPerRank, rowsPerThread;
@@ -388,6 +393,7 @@ int checkCondition(int* neighbors, int condition){
     return DEAD;
 }
 
+//This function updates the ghost data in the ghost rows for each rank.
 void* updateGhostData(void* arg, int pid){
     gameData** gData = (gameData**)arg;
     int rank, commSize, rowsPerRank;
@@ -416,6 +422,9 @@ void* updateGhostData(void* arg, int pid){
     return NULL;
 }
 
+
+//Originally I was going to implement checkpointing but I ran out of time.
+//The function is mostly complete however:
 void* writeCheckpoint(void* arg){
     gameData** cData = (gameData**)arg;
     int rank, commSize, rowsPerRank;
@@ -440,7 +449,6 @@ void* writeCheckpoint(void* arg){
 void* xzibit (void* arg){
     int* temp = (int*)arg;
     int pid = *temp;
-    // printf("MY PID IS: %d\n", pid);
     fflush(NULL);
     int rank, commSize;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -450,24 +458,22 @@ void* xzibit (void* arg){
     initBoard(&gData, pid);
 
     //Synchronize threads after initialization of the game board struct
-    // MPI_Barrier( MPI_COMM_WORLD );
     pthread_mpi_barrier(pid);
 
     populateBoard(&gData, pid);
 
     //Synchronize threads after population of game boards
     pthread_mpi_barrier(pid);
-    // MPI_Barrier( MPI_COMM_WORLD );
 
 
     // MAIN LOOP WHICH RUNS THE PROGRAM:
     for(int i = 0; i < EVOLVE_TIME; ++i){
         if(DEBUG){
-            // printf("RANK %d: Timestep: %d\n", rank, i);
+            printf("RANK %d: Timestep: %d\n", rank, i);
             fflush(NULL);
         }
         updateGhostData(&gData, pid);
-        // pthread_mpi_barrier(pid);
+        pthread_mpi_barrier(pid);
         updateCells(&gData, pid);
         pthread_mpi_barrier(pid);
     }
