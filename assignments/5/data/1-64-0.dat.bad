@@ -1,0 +1,2 @@
+2017-04-20 20:17:48.923 (WARN ) [0xfff84959160] 1664284:ibm.runjob.client.Job: terminated by signal 11
+2017-04-20 20:17:48.924 (WARN ) [0xfff84959160] 1664284:ibm.runjob.client.Job: abnormal termination by signal 11 from rank 39

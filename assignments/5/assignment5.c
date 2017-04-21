@@ -28,8 +28,8 @@
 #define DEBUG 0
 #define HUMAN_OUTPUT 0
 //8192
-#define WIDTH 512
-#define HEIGHT 512
+#define WIDTH 1024
+#define HEIGHT 1024
 
 #define DEFAULT_PTHREADS 1
 #define DEFAULT_NODES 1
@@ -305,6 +305,15 @@ int wrapRank(int rank, int rowsPerRank){
     return rank;
 }
 
+void pthread_mpi_barrier(int pid){
+    if(pid == 0){
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    if(gData->pThreadsPerNode != 0){
+        pthread_barrier_wait(&barrier);
+    }
+}
+
 void* updateCells(void* arg, int pid){
     gameData** gData = (gameData**)arg;
     int rank, commSize, rowsPerRank, rowsPerThread;
@@ -393,6 +402,8 @@ void* updateGhostData(void* arg, int pid){
         MPI_Isend((*gData)->cellData[rowsPerRank - 1], WIDTH, MPI_INT, wrapRank(rank + 1, rowsPerRank),
             rank * rowsPerRank, MPI_COMM_WORLD, &request[1]);
 
+        pthread_mpi_barrier(pid);
+
         MPI_Irecv((*gData)->cellData[0], WIDTH, MPI_INT, wrapRank(rank - 1, rowsPerRank), 
             rank * rowsPerRank, MPI_COMM_WORLD, &request[2]);
         MPI_Irecv((*gData)->cellData[rowsPerRank], WIDTH, MPI_INT, wrapRank(rank + 1, rowsPerRank),
@@ -418,15 +429,6 @@ void* writeCheckpoint(void* arg){
         }
     }   
     return NULL;
-}
-
-void pthread_mpi_barrier(int pid){
-    if(pid == 0){
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-    if(gData->pThreadsPerNode != 0){
-        pthread_barrier_wait(&barrier);
-    }
 }
 
 
