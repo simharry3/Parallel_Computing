@@ -25,11 +25,11 @@
 
 #define ALIVE 1
 #define DEAD  0
-#define DEBUG 0
+#define DEBUG 1
 #define HUMAN_OUTPUT 0
 //8192
-#define WIDTH 1024
-#define HEIGHT 1024
+#define WIDTH 16
+#define HEIGHT 16
 
 #define DEFAULT_PTHREADS 1
 #define DEFAULT_NODES 1
@@ -50,7 +50,8 @@ typedef struct{
     int threshold;
     int pThreadsPerNode;
     int nNodes;
-    pthread_mutex_t* mutex;
+    pthread_mutex_t topMutex;
+    pthread_mutex_t bottomMutex;
 }gameData;
 
 gameData* gData;
@@ -114,6 +115,8 @@ int main(int argc, char *argv[])
     gData->threshold = thresh;
     gData->pThreadsPerNode = numThreads; 
     gData->nNodes = nodes;
+    // pthread_mutex_init(&(gData->bottomMutex), NULL);
+    // pthread_mutex_init(&(gData->topMutex), NULL);
 
     universeCheckpoint.cellData = calloc(HEIGHT, sizeof(int*));
     for(int i = 0; i < HEIGHT; ++i){
@@ -173,6 +176,9 @@ int main(int argc, char *argv[])
         }
     }
     
+    // pthread_mutex_destroy(&(gData->bottomMutex));
+    // pthread_mutex_destroy(&(gData->topMutex));
+
     MPI_Finalize();
     if(numThreads != 0){
         pthread_exit(NULL);
@@ -391,8 +397,8 @@ void* updateGhostData(void* arg, int pid){
 
     MPI_Request request[4];
     if(DEBUG){
-        printf("RANK %d: STARTING GDU. Forward Rank: %d Backward Rank: %d\n"
-            ,rank, wrapRank(rank + 1, rowsPerRank), wrapRank(rank - 1, rowsPerRank));
+        // printf("RANK %d: STARTING GDU. Forward Rank: %d Backward Rank: %d\n"
+            // ,rank, wrapRank(rank + 1, rowsPerRank), wrapRank(rank - 1, rowsPerRank));
         fflush(NULL);
     }
 
@@ -401,8 +407,6 @@ void* updateGhostData(void* arg, int pid){
             rank * rowsPerRank, MPI_COMM_WORLD, &request[0]);
         MPI_Isend((*gData)->cellData[rowsPerRank - 1], WIDTH, MPI_INT, wrapRank(rank + 1, rowsPerRank),
             rank * rowsPerRank, MPI_COMM_WORLD, &request[1]);
-
-        pthread_mpi_barrier(pid);
 
         MPI_Irecv((*gData)->cellData[0], WIDTH, MPI_INT, wrapRank(rank - 1, rowsPerRank), 
             rank * rowsPerRank, MPI_COMM_WORLD, &request[2]);
@@ -459,36 +463,15 @@ void* xzibit (void* arg){
     // MAIN LOOP WHICH RUNS THE PROGRAM:
     for(int i = 0; i < EVOLVE_TIME; ++i){
         if(DEBUG){
-            printf("RANK %d: Timestep: %d\n", rank, i);
+            // printf("RANK %d: Timestep: %d\n", rank, i);
             fflush(NULL);
         }
         updateGhostData(&gData, pid);
-        pthread_mpi_barrier(pid);
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // MPI_Barrier(MPI_COMM_WORLD); //barrier here to make sure all ghost data is up to date
+        // pthread_mpi_barrier(pid);
         updateCells(&gData, pid);
-        // MPI_Barrier(MPI_COMM_WORLD);
-        if(DEBUG){
-            printf("=========================\n");
-            fflush(NULL);
-            // MPI_Barrier(MPI_COMM_WORLD);
-        }
-
         pthread_mpi_barrier(pid);
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // //CHECKPOINTING:
-        // if(i % CHECKPOINT_INTERVAL == 0){
-        //     writeCheckpoint(&universeCheckpoint);
-        //     MPI_Barrier(MPI_COMM_WORLD);
-        // }
     }
-
-
-    pthread_mpi_barrier(pid);
-    // MPI_Barrier(MPI_COMM_WORLD);
     destroyBoard(&gData, pid);
-
-    pthread_mpi_barrier(pid);
     if(gData->pThreadsPerNode != 0){
         pthread_exit(NULL);
     }
