@@ -30,6 +30,10 @@ int checkParticleCollision(state* st, particle* p, int dx, int dy, int dz){
     return 0;
 }
 
+void addCollidedParticle(state* st, particle* p){
+
+}
+
 void updateParticlePosition(state* st, particle* p){
     int num = rand() % 6;
     int dx, dy, dz;
@@ -61,7 +65,7 @@ void updateParticlePosition(state* st, particle* p){
         p->position.z += dz;
     }
     else{
-        //add particle to collisions list
+        addCollidedParticle(st, p);
     }
 }
 
@@ -112,6 +116,7 @@ void initAggregators(state* st, char* agFile){
 
 
 }
+
 
 void printState(state* st, context* ctx){
     printf("ACTIVE PARTICLES:\n =========================\n");
