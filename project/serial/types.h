@@ -13,7 +13,7 @@ typedef struct vec3D{
 
 typedef struct particle{
     vec3D position;
-    uint id;
+    int id;
     int collision;
     //ADD PARTICLE 
 }particle;
@@ -38,7 +38,8 @@ void initParticle(particle* p, int* pos, int id);
 void printParticle(particle* p);
 void updateParticlePosition(state* st, particle* p);
 
-void initContext(context** ctx, int* init);
+void initContext(context** ctx, int* data);
 void initState(state** st, context* ctx);
+void initAggregators(state* st, char* agFile);
 void printState(state* st, context* ctx);
 #endif /*TYPES_H_*/

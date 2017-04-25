@@ -10,12 +10,12 @@ int main(int argc, char* argv[]){
 
     //<NUM PARTICLES> <NUM STEPS>
     int* data = calloc(argc - 1, sizeof(int));
-    for(int i = 1; i < argc; ++i){
+    for(int i = 1; i < argc - 1; ++i){
         data[i - 1] = strtol(argv[i], NULL, 10);
     }
     initContext(&ctx, data);
     initState(&st, ctx);
-
+    initAggregators(st, argv[argc-1]);
     printState(st, ctx);
     runSystem(st, ctx);
     printState(st, ctx);

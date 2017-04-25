@@ -96,8 +96,30 @@ void initState(state** st, context* ctx){
     (*st)->collidedParticles = 0;
 }
 
+void initAggregators(state* st, char* agFile){
+    printf("READING AG DATA FROM FILE: %s\n", agFile);
+    
+    int* pos = (int*)calloc(3, sizeof(int));
+    char* buff = (char*)calloc(8, sizeof(char));
+    char* lineBuffer = (char*)calloc(32, sizeof(char));
+    FILE* fp;
+    fp = fopen(agFile, "r");
+    while(fscanf(fp, "%d %d %d", &pos[0], &pos[1], &pos[2]) != EOF){
+        st->ctab = realloc(st->ctab, (st->collidedParticles + 1) * sizeof(particle));
+        initParticle(&(st->ctab[st->collidedParticles]), pos, (st->collidedParticles + 1) * -1);
+        ++st->collidedParticles;
+    }
+
+
+}
+
 void printState(state* st, context* ctx){
-    for(int i = 0; i < ctx->numParticles; ++i){
+    printf("ACTIVE PARTICLES:\n =========================\n");
+    for(int i = 0; i < st->activeParticles; ++i){
         printParticle(&(st->ptab[i]));
+    }
+    printf("COLLIDED PARTICLES:\n =========================\n");
+    for(int i = 0; i < st->collidedParticles; ++i){
+        printParticle(&(st->ctab[i]));
     }
 }
