@@ -18,7 +18,6 @@ void updateParticlePosition(particle* p){
     int num = rand() % 6;
     int dx, dy, dz;
     dx = dy = dz = 0;
-    // printf(">>>>>>>%d\n", num);
     switch(num){
         case 0:
             dx = -1;
@@ -39,7 +38,7 @@ void updateParticlePosition(particle* p){
             dz = 1;
             break;
     }
-
+    //Check for collision here
     p->position.x += dx;
     p->position.y += dy;
     p->position.z += dz;
@@ -60,6 +59,7 @@ void initState(state** st, context* ctx){
     *st = calloc(1, sizeof(state));
     int* pos = (int*)calloc(3, sizeof(int));
     
+    //Random Variable Initialization
     time_t t;
     srand((unsigned) time(&t));
 
