@@ -8,6 +8,7 @@ int main(int argc, char* argv[]){
     state* st;
     context* ctx;
 
+    //<NUM PARTICLES> <NUM STEPS>
     int* data = calloc(argc - 1, sizeof(int));
     for(int i = 1; i < argc; ++i){
         data[i - 1] = strtol(argv[i], NULL, 10);
