@@ -2,19 +2,35 @@
 
 
 void initParticle(particle* p, int* pos, int id){
-    p->position.x = rand() % pos[0];
-    p->position.y = rand() % pos[1];
-    p->position.z = rand() % pos[2];
+    p->position.x = pos[0];
+    p->position.y = pos[1];
+    p->position.z = pos[2];
 
     p->id = id;
 }
 
 void printParticle(particle* p){
-    printf("Particle %d: %f, %f, %f\n", p->id, p->position.x, 
+    printf("Particle %d: %d, %d, %d\n", p->id, p->position.x, 
                                      p->position.y, p->position.z);
 }
 
-void updateParticlePosition(particle* p){
+//check if two particles have the same location:
+int checkLocations(particle* p1, particle* p2){
+    return p1->position.x == p2->position.x &&
+            p1->position.y == p2->position.y &&
+            p1->position.z == p2->position.z;
+}
+
+int checkParticleCollision(state* st, particle* p, int dx, int dy, int dz){
+    for(int i = 0; i < st->collidedParticles; ++i){
+        if(checkLocations(p, &(st->ctab[i]))){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void updateParticlePosition(state* st, particle* p){
     int num = rand() % 6;
     int dx, dy, dz;
     dx = dy = dz = 0;
@@ -38,10 +54,15 @@ void updateParticlePosition(particle* p){
             dz = 1;
             break;
     }
+    if(!checkParticleCollision(st, p, dx, dy, dz)){
     //Check for collision here
-    p->position.x += dx;
-    p->position.y += dy;
-    p->position.z += dz;
+        p->position.x += dx;
+        p->position.y += dy;
+        p->position.z += dz;
+    }
+    else{
+        //add particle to collisions list
+    }
 }
 
 
@@ -70,6 +91,9 @@ void initState(state** st, context* ctx){
         pos[2] = rand() % ctx->max[2];
         initParticle(&(((*st)->ptab)[i]), pos, i);
     }
+
+    (*st)->activeParticles = ctx->numParticles;
+    (*st)->collidedParticles = 0;
 }
 
 void printState(state* st, context* ctx){

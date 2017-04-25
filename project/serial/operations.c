@@ -2,8 +2,8 @@
 
 
 void stepSystem(state* st, context* ctx){
-    for(int i = 0; i < ctx->numParticles; ++i){
-        updateParticlePosition(&(st->ptab[i]));
+    for(int i = 0; i < st->activeParticles; ++i){
+        updateParticlePosition(st, &(st->ptab[i]));
     }
 }
 

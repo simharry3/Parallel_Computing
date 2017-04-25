@@ -8,7 +8,7 @@
 typedef double real;
 
 typedef struct vec3D{
-    real x, y, z;
+    int x, y, z;
 }vec3D;
 
 typedef struct particle{
@@ -26,6 +26,9 @@ typedef struct context{
 }context;
 
 typedef struct state{
+    uint activeParticles;
+    uint collidedParticles;
+    
     particle* ptab;
     particle* ctab;
     //ADD STATE
@@ -33,7 +36,7 @@ typedef struct state{
 
 void initParticle(particle* p, int* pos, int id);
 void printParticle(particle* p);
-void updateParticlePosition(particle* p);
+void updateParticlePosition(state* st, particle* p);
 
 void initContext(context** ctx, int* init);
 void initState(state** st, context* ctx);
