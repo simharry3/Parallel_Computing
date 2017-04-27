@@ -8,5 +8,6 @@
 
 void runSystem(state* st, context* ctx);
 void stepSystem(state* st, context* ctx);
+void printSimulationResults(state* st, context* ctx);
 
 #endif /*_OPERATIONS_H_*/

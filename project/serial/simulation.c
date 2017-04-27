@@ -19,5 +19,6 @@ int main(int argc, char* argv[]){
     printState(st, ctx);
     runSystem(st, ctx);
     printState(st, ctx);
+    printSimulationResults(st, ctx);
     exit(0);
 }

@@ -37,7 +37,7 @@ typedef struct state{
 
 void initParticle(particle* p, int* pos, int id);
 void printParticle(particle* p);
-void updateParticlePosition(state* st, particle* p);
+void updateParticlePosition(state* st, context* ctx, particle* p);
 
 void initContext(context** ctx, int* data);
 void initState(state** st, context* ctx);

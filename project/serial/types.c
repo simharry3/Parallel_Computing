@@ -45,7 +45,30 @@ void addCollidedParticle(state* st, particle* p){
     st->ptab = realloc(st->ptab, st->activeParticles * sizeof(particle));
 }
 
-void updateParticlePosition(state* st, particle* p){
+void capParticle(context* ctx, particle* p){
+    if(p->position.x > ctx->max[0]){
+        p->position.x = ctx->max[0];
+    }
+    else if(p->position.x < 0){
+        p->position.x = 0;
+    }
+
+    if(p->position.y > ctx->max[1]){
+        p->position.y = ctx->max[1];
+    }
+    else if(p->position.y < 0){
+        p->position.y = 0;
+    }
+
+    if(p->position.z > ctx->max[2]){
+        p->position.z = ctx->max[2];
+    }
+    else if(p->position.z < 0){
+        p->position.z = 0;
+    }
+}
+
+void updateParticlePosition(state* st, context* ctx, particle* p){
     int num = rand() % 6;
     int dx, dy, dz;
     dx = dy = dz = 0;
@@ -74,6 +97,7 @@ void updateParticlePosition(state* st, particle* p){
         p->position.x += dx;
         p->position.y += dy;
         p->position.z += dz;
+        capParticle(ctx, p);
     }
     else{
         addCollidedParticle(st, p);
@@ -86,9 +110,9 @@ void initContext(context** ctx, int* data){
     (*ctx)->max = calloc(3, sizeof(int));
     (*ctx)->numParticles = data[0];
     (*ctx)->numSteps = data[1];
-    (*ctx)->max[0] = 1;
-    (*ctx)->max[1] = 1;
-    (*ctx)->max[2] = 1;
+    (*ctx)->max[0] = 10;
+    (*ctx)->max[1] = 10;
+    (*ctx)->max[2] = 10;
 }
 
 void initState(state** st, context* ctx){

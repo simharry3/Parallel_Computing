@@ -3,7 +3,7 @@
 
 void stepSystem(state* st, context* ctx){
     for(int i = 0; i < st->activeParticles; ++i){
-        updateParticlePosition(st, &(st->ptab[i]));
+        updateParticlePosition(st, ctx, &(st->ptab[i]));
     }
 }
 
@@ -20,4 +20,8 @@ void runSystem(state* st, context* ctx){
             ++st->simSteps;
         }
     }
+}
+
+void printSimulationResults(state* st, context* ctx){
+    printf("Simulation finished in %u steps\n", st->simSteps);
 }
