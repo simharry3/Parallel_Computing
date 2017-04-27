@@ -21,8 +21,9 @@ int checkLocations(particle* p1, particle* p2){
             p1->position.z == p2->position.z;
 }
 
-int checkParticleCollision(state* st, particle* p, int dx, int dy, int dz){
+int checkParticleCollision(state* st, particle* p){
     for(int i = 0; i < st->collidedParticles; ++i){
+
         if(checkLocations(p, &(st->ctab[i]))){
             return 1;
         }
@@ -31,6 +32,8 @@ int checkParticleCollision(state* st, particle* p, int dx, int dy, int dz){
 }
 
 void addCollidedParticle(state* st, particle* p){
+    printf("PARTICLE INFORMATION:\n");
+    printParticle(p);
     ++st->collidedParticles;
     particle* tmp;
     tmp = realloc(st->ctab, st->collidedParticles * sizeof(particle));
@@ -101,14 +104,17 @@ void updateParticlePosition(state* st, context* ctx, particle* p){
             dz = 1;
             break;
     }
-    if(!checkParticleCollision(st, p, dx, dy, dz)){
+    p->position.x += dx;
+    p->position.y += dy;
+    p->position.z += dz;
+    if(!checkParticleCollision(st, p)){
     //Check for collision here
-        p->position.x += dx;
-        p->position.y += dy;
-        p->position.z += dz;
         capParticle(ctx, p);
     }
     else{
+        p->position.x -= dx;
+        p->position.y -= dy;
+        p->position.z -= dz;
         addCollidedParticle(st, p);
     }
 }
