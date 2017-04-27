@@ -32,8 +32,12 @@ int checkParticleCollision(state* st, particle* p, int dx, int dy, int dz){
 
 void addCollidedParticle(state* st, particle* p){
     ++st->collidedParticles;
-    st->ctab = realloc(st->ctab, st->collidedParticles * sizeof(particle));
-    st->ctab[st->collidedParticles] = *p;
+    particle* tmp;
+    tmp = realloc(st->ctab, st->collidedParticles * sizeof(particle));
+    free(st->ctab);
+    st->ctab = tmp;
+    tmp = NULL;
+    st->ctab[st->collidedParticles - 1] = *p;
 
     //Scan the list of bodies (up until the end), move the particle we want to remove to the end:
     for(int i = 0; i < st->activeParticles - 1; ++i){
@@ -42,7 +46,12 @@ void addCollidedParticle(state* st, particle* p){
         }
     }
     --st->activeParticles;
-    st->ptab = realloc(st->ptab, st->activeParticles * sizeof(particle));
+    if(st->activeParticles > 0){
+        tmp = realloc(st->ptab, st->activeParticles * sizeof(particle));
+        free(st->ptab);
+        st->ptab = tmp;
+        tmp = NULL;
+    }
 }
 
 void capParticle(context* ctx, particle* p){
