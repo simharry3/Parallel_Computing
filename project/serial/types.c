@@ -31,7 +31,18 @@ int checkParticleCollision(state* st, particle* p, int dx, int dy, int dz){
 }
 
 void addCollidedParticle(state* st, particle* p){
+    ++st->collidedParticles;
+    st->ctab = realloc(st->ctab, st->collidedParticles * sizeof(particle));
+    st->ctab[st->collidedParticles] = *p;
 
+    //Scan the list of bodies (up until the end), move the particle we want to remove to the end:
+    for(int i = 0; i < st->activeParticles - 1; ++i){
+        if(&(st->ptab[i]) == p){
+            st->ptab[i] = st->ptab[st->activeParticles];
+        }
+    }
+    --st->activeParticles;
+    st->ptab = realloc(st->ptab, st->activeParticles * sizeof(particle));
 }
 
 void updateParticlePosition(state* st, particle* p){
@@ -75,9 +86,9 @@ void initContext(context** ctx, int* data){
     (*ctx)->max = calloc(3, sizeof(int));
     (*ctx)->numParticles = data[0];
     (*ctx)->numSteps = data[1];
-    (*ctx)->max[0] = 100;
-    (*ctx)->max[1] = 100;
-    (*ctx)->max[2] = 100;
+    (*ctx)->max[0] = 1;
+    (*ctx)->max[1] = 1;
+    (*ctx)->max[2] = 1;
 }
 
 void initState(state** st, context* ctx){
@@ -98,6 +109,7 @@ void initState(state** st, context* ctx){
 
     (*st)->activeParticles = ctx->numParticles;
     (*st)->collidedParticles = 0;
+    (*st)->simSteps = 0;
 }
 
 void initAggregators(state* st, char* agFile){

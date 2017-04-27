@@ -20,7 +20,7 @@ typedef struct particle{
 
 typedef struct context{
     uint numParticles;
-    uint numSteps;
+    int numSteps;
     int* max;
     char* checkpointFile;
 }context;
@@ -28,6 +28,7 @@ typedef struct context{
 typedef struct state{
     uint activeParticles;
     uint collidedParticles;
+    uint simSteps;
     
     particle* ptab;
     particle* ctab;
