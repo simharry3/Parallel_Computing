@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h> //Needed for memcpy
 #include <time.h> //Needed for RNG 
 
 typedef double real;

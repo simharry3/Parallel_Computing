@@ -32,28 +32,34 @@ int checkParticleCollision(state* st, particle* p){
 }
 
 void addCollidedParticle(state* st, particle* p){
-    printf("PARTICLE INFORMATION:\n");
-    printParticle(p);
+    printf("PID: %d\n", p->id);
     ++st->collidedParticles;
-    particle* tmp;
-    tmp = realloc(st->ctab, st->collidedParticles * sizeof(particle));
-    free(st->ctab);
-    st->ctab = tmp;
-    tmp = NULL;
-    st->ctab[st->collidedParticles - 1] = *p;
+    // particle* tmp;
+    st->ctab = realloc(st->ctab, st->collidedParticles * sizeof(particle));
+    // free(st->ctab);
+    // st->ctab = tmp;
+    // tmp = NULL;
+    (st->ctab[st->collidedParticles - 1]).position.x = p->position.x;
+    (st->ctab[st->collidedParticles - 1]).position.y = p->position.y;
+    (st->ctab[st->collidedParticles - 1]).position.z = p->position.z;
+    (st->ctab[st->collidedParticles - 1]).id = p->id;
+    printf("PARTICLE INFORMATION:\n");
+    printParticle(&(st->ctab[st->collidedParticles - 1]));
 
     //Scan the list of bodies (up until the end), move the particle we want to remove to the end:
-    for(int i = 0; i < st->activeParticles - 1; ++i){
-        if(&(st->ptab[i]) == p){
-            st->ptab[i] = st->ptab[st->activeParticles];
-        }
-    }
-    --st->activeParticles;
     if(st->activeParticles > 0){
-        tmp = realloc(st->ptab, st->activeParticles * sizeof(particle));
-        free(st->ptab);
-        st->ptab = tmp;
-        tmp = NULL;
+        for(int i = 0; i < st->activeParticles - 2; ++i){
+            if(&(st->ptab[i]) == p){
+                st->ptab[i] = st->ptab[st->activeParticles - 1];
+            }
+        }
+        --st->activeParticles;
+        if(st->activeParticles > 0){
+            st->ptab = realloc(st->ptab, st->activeParticles * sizeof(particle));
+            // free(st->ptab);
+            // st->ptab = tmp;
+            // tmp = NULL;
+        }
     }
 }
 
@@ -164,8 +170,9 @@ void initAggregators(state* st, char* agFile){
         initParticle(&(st->ctab[st->collidedParticles]), pos, (st->collidedParticles + 1) * -1);
         ++st->collidedParticles;
     }
-
-
+    free(pos);
+    free(buff);
+    free(lineBuffer);
 }
 
 
