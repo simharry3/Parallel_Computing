@@ -2,8 +2,15 @@
 
 
 void stepSystem(state* st, context* ctx){
+    // printf("STEP %u\n", st->simSteps);
+    fflush(NULL);
     for(int i = 0; i < st->activeParticles; ++i){
+        uint collisionCheck = st->activeParticles;
         updateParticlePosition(st, ctx, &(st->ptab[i]));
+        if(collisionCheck != st->activeParticles){
+            printf("STEP %u: COLLISION DETECTED AND ACCOUNTED FOR\n", st->simSteps);
+            --i;
+        }
     }
 }
 

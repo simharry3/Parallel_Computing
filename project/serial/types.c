@@ -47,19 +47,20 @@ void addCollidedParticle(state* st, particle* p){
     printParticle(&(st->ctab[st->collidedParticles - 1]));
 
     //Scan the list of bodies (up until the end), move the particle we want to remove to the end:
-    if(st->activeParticles > 0){
+    if(st->activeParticles > 1){
         for(int i = 0; i < st->activeParticles - 2; ++i){
             if(&(st->ptab[i]) == p){
                 st->ptab[i] = st->ptab[st->activeParticles - 1];
             }
         }
         --st->activeParticles;
-        if(st->activeParticles > 0){
-            st->ptab = realloc(st->ptab, st->activeParticles * sizeof(particle));
+        st->ptab = realloc(st->ptab, st->activeParticles * sizeof(particle));
             // free(st->ptab);
             // st->ptab = tmp;
             // tmp = NULL;
-        }
+    }
+    else{
+        --st->activeParticles;
     }
 }
 
@@ -131,9 +132,9 @@ void initContext(context** ctx, int* data){
     (*ctx)->max = calloc(3, sizeof(int));
     (*ctx)->numParticles = data[0];
     (*ctx)->numSteps = data[1];
-    (*ctx)->max[0] = 10;
-    (*ctx)->max[1] = 10;
-    (*ctx)->max[2] = 10;
+    (*ctx)->max[0] = 100;
+    (*ctx)->max[1] = 100;
+    (*ctx)->max[2] = 100;
 }
 
 void initState(state** st, context* ctx){
@@ -162,7 +163,6 @@ void initAggregators(state* st, char* agFile){
     
     int* pos = (int*)calloc(3, sizeof(int));
     char* buff = (char*)calloc(8, sizeof(char));
-    char* lineBuffer = (char*)calloc(32, sizeof(char));
     FILE* fp;
     fp = fopen(agFile, "r");
     while(fscanf(fp, "%d %d %d", &pos[0], &pos[1], &pos[2]) != EOF){
@@ -172,7 +172,6 @@ void initAggregators(state* st, char* agFile){
     }
     free(pos);
     free(buff);
-    free(lineBuffer);
 }
 
 
