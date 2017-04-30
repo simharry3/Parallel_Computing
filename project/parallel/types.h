@@ -44,7 +44,7 @@ void printParticle(particle* p, int readability);
 void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank);
 void updateCollision(particle* cols);
 void initAggregators(state* st, char* agFile, int my_rank);
-void initContext(context** ctx, int* data);
+void initContext(context** ctx, int* data, int comm_size);
 void initState(state** st, context* ctx);
 void printState(state* st, context* ctx);
 

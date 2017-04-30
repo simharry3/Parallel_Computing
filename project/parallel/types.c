@@ -155,7 +155,7 @@ void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank){
         p->position.z -= dz;
         //printParticle(p);
         addCollidedParticle(st, p);
-        MPI_Bcast(st->ctab, sizeof(st->ctab)/sizeof(st->ctab[0]), MPI_UNSIGNED_LONG, my_rank, MPI_COMM_WORLD);
+        MPI_Bcast(st->ctab, st->collidedParticles, MPI_UNSIGNED_LONG, my_rank, MPI_COMM_WORLD);
 
     }
     //printParticle(p);
@@ -167,17 +167,17 @@ void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank){
 
 
 
-void initContext(context** ctx, int* data){
+void initContext(context** ctx, int* data, int comm_size){
     *ctx = calloc(1, sizeof(context));
     (*ctx)->max = calloc(3, sizeof(int));
-    (*ctx)->numParticles = data[0];
+    (*ctx)->numParticles = data[0]/comm_size;
     (*ctx)->numSteps = data[1];
     (*ctx)->chkFreq = data[2];
     (*ctx)->humanOutput = data[3];
 
-    (*ctx)->max[0] = 100;
-    (*ctx)->max[1] = 100;
-    (*ctx)->max[2] = 100;
+    (*ctx)->max[0] = 5;
+    (*ctx)->max[1] = 5;
+    (*ctx)->max[2] = 5;
 }
 
 void initState(state** st, context* ctx){
