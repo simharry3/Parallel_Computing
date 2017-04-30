@@ -19,7 +19,7 @@ void stepSystem(state* st, context* ctx, int mpi_rank){
 }
 
 void runSystem(state* st, context* ctx, int mpi_rank){
-
+    MPI_Barrier(MPI_COMM_WORLD);
     //printf("%d\n", st->activeParticles);
     if(ctx->numSteps > 1){
     	int i;
