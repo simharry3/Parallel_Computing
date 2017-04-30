@@ -19,6 +19,8 @@ void stepSystem(state* st, context* ctx, int mpi_rank){
 }
 
 void runSystem(state* st, context* ctx, int mpi_rank){
+
+    //printf("%d\n", st->activeParticles);
     if(ctx->numSteps > 1){
     	int i;
         for(i = 0; i < ctx->numSteps; ++i){

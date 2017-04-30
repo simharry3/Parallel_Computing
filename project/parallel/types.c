@@ -1,6 +1,7 @@
 #include <types.h>
 #include <mpi.h>
 
+int rank;
 
 void initParticle(particle* p, int* pos, int id){
     p->position.x = pos[0];
@@ -177,8 +178,10 @@ void initState(state** st, context* ctx){
 }
 
 
-void initAggregators(state* st, char* agFile){
-    printf("READING AG DATA FROM FILE: %s\n", agFile);
+void initAggregators(state* st, char* agFile, int my_rank){
+    rank = my_rank;
+    if(my_rank == 0)
+        printf("READING AG DATA FROM FILE: %s\n", agFile);
     
     int* pos = (int*)calloc(3, sizeof(int));
     char* buff = (char*)calloc(8, sizeof(char));
@@ -191,6 +194,8 @@ void initAggregators(state* st, char* agFile){
     }
     free(pos);
     free(buff);
+
+    //printf("READING AGGREGATORS \n");
 }
 
 
