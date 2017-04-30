@@ -9,7 +9,7 @@
 typedef double real;
 
 typedef struct vec3D{
-    real x, y, z;
+    int x, y, z;
 }vec3D;
 
 typedef struct particle{

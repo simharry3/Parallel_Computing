@@ -12,7 +12,7 @@ void initParticle(particle* p, int* pos, int id){
 }
 
 void printParticle(particle* p){
-    printf("Particle %d: %f, %f, %f\n", p->id, p->position.x, 
+    printf("Particle %d: %d, %d, %d\n", p->id, p->position.x, 
                                      p->position.y, p->position.z);
 }
 
