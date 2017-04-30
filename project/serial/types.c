@@ -132,9 +132,9 @@ void initContext(context** ctx, int* data){
     (*ctx)->max = calloc(3, sizeof(int));
     (*ctx)->numParticles = data[0];
     (*ctx)->numSteps = data[1];
-    (*ctx)->max[0] = 100;
-    (*ctx)->max[1] = 100;
-    (*ctx)->max[2] = 100;
+    (*ctx)->max[0] = 2;
+    (*ctx)->max[1] = 2;
+    (*ctx)->max[2] = 2;
 }
 
 void initState(state** st, context* ctx){

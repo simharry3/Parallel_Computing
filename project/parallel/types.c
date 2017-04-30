@@ -12,9 +12,15 @@ void initParticle(particle* p, int* pos, int id, int collision){
     p->id = id;
 }
 
-void printParticle(particle* p){
-    printf("%d %d %d %d %d\n", p->id, p->collision, p->position.x, 
+void printParticle(particle* p, int readability){
+    if(readability == 1){
+        printf("Particle %d: (%d, %d, %d) C: %d\n", p->id, p->position.x, 
+                                     p->position.y, p->position.z, p->collision);
+    }
+    else{  
+        printf("%d %d %d %d %d\n", p->id, p->collision, p->position.x, 
                                      p->position.y, p->position.z);
+    }
     fflush(NULL);
 }
 
@@ -166,9 +172,12 @@ void initContext(context** ctx, int* data){
     (*ctx)->max = calloc(3, sizeof(int));
     (*ctx)->numParticles = data[0];
     (*ctx)->numSteps = data[1];
-    (*ctx)->max[0] = 2;
-    (*ctx)->max[1] = 2;
-    (*ctx)->max[2] = 2;
+    (*ctx)->chkFreq = data[2];
+    (*ctx)->humanOutput = data[3];
+
+    (*ctx)->max[0] = 100;
+    (*ctx)->max[1] = 100;
+    (*ctx)->max[2] = 100;
 }
 
 void initState(state** st, context* ctx){
@@ -218,11 +227,10 @@ void initAggregators(state* st, char* agFile, int my_rank){
 void printState(state* st, context* ctx){
     // printf("ACTIVE PARTICLES:\n =========================\n");
     int i;
-    // for(i = 0; i < st->activeParticles; ++i){
-    //     printParticle(&(st->ptab[i]));
-    // }
-    //printf("COLLIDED PARTICLES:\n =========================\n");
+    for(i = 0; i < st->activeParticles; ++i){
+        printParticle(&(st->ptab[i]), ctx->humanOutput);
+    }
     for(i = 0; i < st->collidedParticles; ++i){
-        printParticle(&(st->ctab[i]));
+        printParticle(&(st->ctab[i]), ctx->humanOutput);
     }
 }

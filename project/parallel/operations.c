@@ -29,6 +29,7 @@ void runSystem(state* st, context* ctx, int mpi_rank){
     	int i;
         for(i = 0; i < ctx->numSteps; ++i){
             stepSystem(st, ctx, mpi_rank);
+            ++st->simSteps;
         }
     }
     else{
@@ -36,12 +37,20 @@ void runSystem(state* st, context* ctx, int mpi_rank){
             fflush(NULL);
             stepSystem(st, ctx, mpi_rank);
             ++st->simSteps;
+            if(st->simSteps % ctx->chkFreq == 0){
+                if(mpi_rank == 0){
+                    printf("=====STEP %d:=====\n", st->simSteps);
+                    printState(st, ctx);
+                }
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
             //printf("STUCK HERE\n");
         }
     }
 }
 
 void printSimulationResults(state* st, context* ctx){
+    printState(st, ctx);
     printf("Simulation finished in %u steps\n", st->simSteps);
     fflush(NULL);
 }

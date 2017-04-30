@@ -22,6 +22,9 @@ typedef struct particle{
 typedef struct context{
     uint numParticles;
     int numSteps;
+    int chkFreq;
+    int humanOutput;
+
     int* max;
     char* checkpointFile;
 }context;
@@ -37,7 +40,7 @@ typedef struct state{
 }state;
 
 void initParticle(particle* p, int* pos, int id, int collision);
-void printParticle(particle* p);
+void printParticle(particle* p, int readability);
 void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank);
 void updateCollision(particle* cols);
 void initAggregators(state* st, char* agFile, int my_rank);

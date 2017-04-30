@@ -4,7 +4,6 @@
 #include "types.h"
 #include "operations.h"
 
-
 int main(int argc, char* argv[]){
     
     state* st;
@@ -15,9 +14,7 @@ int main(int argc, char* argv[]){
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    if(mpi_rank == 0)
-        printf("HERE WE GO\n");
-    //<NUM PARTICLES> <NUM STEPS>
+    //<NUM PARTICLES> <NUM STEPS> <chkFreq> <humanOutput> <inputFile>
     int* data = calloc(argc - 1, sizeof(int));
     int i;
     for(i = 1; i < argc; ++i){
@@ -32,8 +29,7 @@ int main(int argc, char* argv[]){
     //     printState(st, ctx);
     runSystem(st, ctx, mpi_rank);
     if(mpi_rank == 0){
-        printState(st, ctx);
-        //printSimulationResults(st, ctx);
+        printSimulationResults(st, ctx);
     }
     MPI_Barrier( MPI_COMM_WORLD );
     MPI_Finalize();
