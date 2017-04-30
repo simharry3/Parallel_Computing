@@ -21,7 +21,7 @@ typedef struct particle{
 
 typedef struct context{
     uint numParticles;
-    uint numSteps;
+    int numSteps;
     int* max;
     char* checkpointFile;
 }context;
@@ -36,7 +36,7 @@ typedef struct state{
     //ADD STATE
 }state;
 
-void initParticle(particle* p, int* pos, int id);
+void initParticle(particle* p, int* pos, int id, int collision);
 void printParticle(particle* p);
 void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank);
 void updateCollision(particle* cols);

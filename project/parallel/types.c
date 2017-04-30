@@ -3,17 +3,19 @@
 
 int rank;
 
-void initParticle(particle* p, int* pos, int id){
+void initParticle(particle* p, int* pos, int id, int collision){
     p->position.x = pos[0];
     p->position.y = pos[1];
     p->position.z = pos[2];
+    p->collision = collision;
 
     p->id = id;
 }
 
 void printParticle(particle* p){
-    printf("Particle %d: %d, %d, %d\n", p->id, p->position.x, 
+    printf("%d %d %d %d %d\n", p->id, p->collision, p->position.x, 
                                      p->position.y, p->position.z);
+    fflush(NULL);
 }
 
 //check if two particles have the same location:
@@ -65,24 +67,31 @@ void capParticle(context* ctx, particle* p){
 }
 
 void addCollidedParticle(state* st, particle* p){
-    printf("PID: %d\n", p->id);
+    // if(rank == 0)
+    //     printf("PID: %d\n", p->id);
     ++st->collidedParticles;
     // particle* tmp;
     st->ctab = realloc(st->ctab, st->collidedParticles * sizeof(particle));
     // free(st->ctab);
     // st->ctab = tmp;
     // tmp = NULL;
+
     (st->ctab[st->collidedParticles - 1]).position.x = p->position.x;
     (st->ctab[st->collidedParticles - 1]).position.y = p->position.y;
     (st->ctab[st->collidedParticles - 1]).position.z = p->position.z;
+    (st->ctab[st->collidedParticles - 1]).collision = 1;
     (st->ctab[st->collidedParticles - 1]).id = p->id;
-    printf("PARTICLE INFORMATION:\n");
-    printParticle(&(st->ctab[st->collidedParticles - 1]));
+    // if(rank == 0){
+    //     printf("COLLIDED PARTICLE INFORMATION:\n");
+    //     printParticle(&(st->ctab[st->collidedParticles - 1]));
+    // }
+    
+    fflush(NULL);
 
     //Scan the list of bodies (up until the end), move the particle we want to remove to the end:
     if(st->activeParticles > 1){
         int i;
-        for( i = 0; i < st->activeParticles - 2; ++i){
+        for( i = 0;  i < st->activeParticles - 1; ++i){
             if(&(st->ptab[i]) == p){
                 st->ptab[i] = st->ptab[st->activeParticles - 1];
             }
@@ -138,10 +147,13 @@ void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank){
         p->position.x -= dx;
         p->position.y -= dy;
         p->position.z -= dz;
+        //printParticle(p);
         addCollidedParticle(st, p);
         MPI_Bcast(st->ctab, sizeof(st->ctab)/sizeof(st->ctab[0]), MPI_UNSIGNED_LONG, my_rank, MPI_COMM_WORLD);
 
     }
+    //printParticle(p);
+
     //Check for collision here
     // if collision call MPI_Isend
 }
@@ -173,7 +185,7 @@ void initState(state** st, context* ctx){
         pos[0] = rand() % ctx->max[0];
         pos[1] = rand() % ctx->max[1];
         pos[2] = rand() % ctx->max[2];
-        initParticle(&(((*st)->ptab)[i]), pos, i);
+        initParticle(&(((*st)->ptab)[i]), pos, i, 0);
     }
 
     (*st)->activeParticles = ctx->numParticles;
@@ -183,9 +195,9 @@ void initState(state** st, context* ctx){
 
 
 void initAggregators(state* st, char* agFile, int my_rank){
-    rank = my_rank;
-    if(my_rank == 0)
-        printf("READING AG DATA FROM FILE: %s\n", agFile);
+    // rank = my_rank;
+    // if(my_rank == 0)
+    //     printf("READING AG DATA FROM FILE: %s\n", agFile);
     
     int* pos = (int*)calloc(3, sizeof(int));
     char* buff = (char*)calloc(8, sizeof(char));
@@ -193,7 +205,7 @@ void initAggregators(state* st, char* agFile, int my_rank){
     fp = fopen(agFile, "r");
     while(fscanf(fp, "%d %d %d", &pos[0], &pos[1], &pos[2]) != EOF){
         st->ctab = realloc(st->ctab, (st->collidedParticles + 1) * sizeof(particle));
-        initParticle(&(st->ctab[st->collidedParticles]), pos, (st->collidedParticles + 1) * -1);
+        initParticle(&(st->ctab[st->collidedParticles]), pos, (st->collidedParticles + 1) * -1, 1);
         ++st->collidedParticles;
     }
     free(pos);
@@ -204,12 +216,12 @@ void initAggregators(state* st, char* agFile, int my_rank){
 
 
 void printState(state* st, context* ctx){
-    printf("ACTIVE PARTICLES:\n =========================\n");
+    // printf("ACTIVE PARTICLES:\n =========================\n");
     int i;
-    for(i = 0; i < st->activeParticles; ++i){
-        printParticle(&(st->ptab[i]));
-    }
-    printf("COLLIDED PARTICLES:\n =========================\n");
+    // for(i = 0; i < st->activeParticles; ++i){
+    //     printParticle(&(st->ptab[i]));
+    // }
+    //printf("COLLIDED PARTICLES:\n =========================\n");
     for(i = 0; i < st->collidedParticles; ++i){
         printParticle(&(st->ctab[i]));
     }

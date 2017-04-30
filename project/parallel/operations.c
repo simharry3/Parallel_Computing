@@ -12,10 +12,14 @@ void stepSystem(state* st, context* ctx, int mpi_rank){
         uint collisionCheck = st->activeParticles;
         updateParticlePosition(st, ctx, &(st->ptab[i]), mpi_rank);
         if(collisionCheck != st->activeParticles){
-            printf("STEP %u: COLLISION DETECTED AND ACCOUNTED FOR\n", st->simSteps);
+            //printf("HERE\n");
+            //printf("STEP %u: COLLISION DETECTED AND ACCOUNTED FOR\n", st->simSteps);
+
             --i;
+            //printf("%d is the index checked, %d is the number of activeParticles\n", i, st->activeParticles);
         }
     }
+    //printf("FINSHED STEP SYSTEM, %d active particle count\n", st->activeParticles);
 }
 
 void runSystem(state* st, context* ctx, int mpi_rank){
@@ -32,10 +36,12 @@ void runSystem(state* st, context* ctx, int mpi_rank){
             fflush(NULL);
             stepSystem(st, ctx, mpi_rank);
             ++st->simSteps;
+            //printf("STUCK HERE\n");
         }
     }
 }
 
 void printSimulationResults(state* st, context* ctx){
     printf("Simulation finished in %u steps\n", st->simSteps);
+    fflush(NULL);
 }

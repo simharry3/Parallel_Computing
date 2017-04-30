@@ -28,12 +28,12 @@ int main(int argc, char* argv[]){
     initContext(&ctx, data);
     initState(&st, ctx);
     initAggregators(st, argv[argc-1], mpi_rank);
-    if(mpi_rank == 0)
-        printState(st, ctx);
+    // if(mpi_rank == 0)
+    //     printState(st, ctx);
     runSystem(st, ctx, mpi_rank);
     if(mpi_rank == 0){
         printState(st, ctx);
-        printSimulationResults(st, ctx);
+        //printSimulationResults(st, ctx);
     }
     MPI_Barrier( MPI_COMM_WORLD );
     MPI_Finalize();
