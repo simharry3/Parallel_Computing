@@ -6,7 +6,7 @@
 
 
 int main(int argc, char* argv[]){
-    printf("HERE WE GO\n");
+    
     state* st;
     context* ctx;
 
@@ -15,7 +15,8 @@ int main(int argc, char* argv[]){
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-
+    if(mpi_rank == 0)
+        printf("HERE WE GO\n");
     //<NUM PARTICLES> <NUM STEPS>
     int* data = calloc(argc - 1, sizeof(int));
     int i;
@@ -26,11 +27,16 @@ int main(int argc, char* argv[]){
     
     initContext(&ctx, data);
     initState(&st, ctx);
-    initAggregators(st, argv[argc-1]);
-    printState(st, ctx);
+    initAggregators(st, argv[argc-1], mpi_rank);
+    if(mpi_rank == 0)
+        printState(st, ctx);
     runSystem(st, ctx, mpi_rank);
-    printState(st, ctx);
-    printSimulationResults(st, ctx);
+    if(mpi_rank == 0){
+        printState(st, ctx);
+        printSimulationResults(st, ctx);
+    }
+    MPI_Barrier( MPI_COMM_WORLD );
+    MPI_Finalize();
     exit(0);
 }
 
