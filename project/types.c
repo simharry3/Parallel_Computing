@@ -18,7 +18,7 @@ void updateParticlePosition(particle* p){
     int num = rand() % 6;
     int dx, dy, dz;
     dx = dy = dz = 0;
-    printf(">>>>>>>%d\n", num);
+    // printf(">>>>>>>%d\n", num);
     switch(num){
         case 0:
             dx = -1;
@@ -46,7 +46,7 @@ void updateParticlePosition(particle* p){
 }
 
 
-void initContext(context** ctx, int* 9999999999data){
+void initContext(context** ctx, int* data){
     *ctx = calloc(1, sizeof(context));
     (*ctx)->max = calloc(3, sizeof(int));
     (*ctx)->numParticles = data[0];

@@ -6,7 +6,8 @@
 #include <time.h>
 #include "types.h"
 
-void runSystem(state* st, context* ctx, int numAll);
-void stepSystem(state* st, context* ctx, int numAll);
+void runSystem(state* st, context* ctx, int mpi_rank);
+void stepSystem(state* st, context* ctx, int mpi_rank);
+void printSimulationResults(state* st, context* ctx);
 
 #endif /*_OPERATIONS_H_*/

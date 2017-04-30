@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h> //Needed for memcpy
 #include <time.h> //Needed for RNG 
 
 typedef double real;
@@ -26,6 +27,10 @@ typedef struct context{
 }context;
 
 typedef struct state{
+    uint activeParticles;
+    uint collidedParticles;
+    uint simSteps;
+    
     particle* ptab;
     particle* ctab;
     //ADD STATE
@@ -33,10 +38,11 @@ typedef struct state{
 
 void initParticle(particle* p, int* pos, int id);
 void printParticle(particle* p);
-void updateParticlePosition(particle* p);
-void updateCollision(particle * cols);
-
-void initContext(context** ctx, int* init, int commsize);
+void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank);
+void updateCollision(particle* cols);
+void initAggregators(state* st, char* agFile);
+void initContext(context** ctx, int* data);
 void initState(state** st, context* ctx);
 void printState(state* st, context* ctx);
+
 #endif /*TYPES_H_*/
