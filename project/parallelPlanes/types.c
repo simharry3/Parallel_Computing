@@ -122,8 +122,8 @@ void addCollidedParticle(state* st, particle* p){
 void updateParticlePositions(state* st, context* ctx){
     MPI_Request request;
     int num;
-    int dx, dy, dz;
-    dx = dy = dz = 0;
+    int* d = calloc(3, sizeof(int));
+    d[0] = d[1] = d[2] = 0;
     int** moveList = NULL;
     int movedParticles = 0;
     int* pos = calloc(3, sizeof(int));
@@ -140,45 +140,53 @@ void updateParticlePositions(state* st, context* ctx){
                 num = rand() % 6;
                 switch(num){
                     case 0:
-                        dx = -1;
+                        d[0] = -1;
                         break;
                     case 1:
-                        dx = 1;
+                        d[0] = 1;
                         break;
                     case 2:
-                        dy = -1;
+                        d[1] = -1;
                         break;
                     case 3:
-                        dy = 1;
+                        d[1] = 1;
                         break;
                     case 4:
-                        dz = -1;
+                        d[2] = -1;
                         break;
                     case 5:
-                        dz = 1;
+                        d[2] = 1;
                         break;
                 }
-                pos[0] += dx;
-                pos[1] += dy;
-                pos[2] += dz;
+                pos[0] += d[0];
+                pos[1] += d[1];
+                pos[2] += d[2];
                 capPosition(ctx, &pos);
-                if(checkParticleCollision(st, ctx, pos) > ACTIVE_PARTICLE){
+                int checkedValue = checkParticleCollision(st, ctx, pos);
+                if(checkedValue == AGGREGATOR_PARTICLE || checkedValue == COLLIDED_PARTICLE){
                     st->universe[i][j] = COLLIDED_PARTICLE;
                     // printf("HERE<<<<<<<<<<<<<<<<<<<<<<<\n");
                     fflush(NULL);
                     --st->activeParticles;
                 }
                 else{
-                    int** temp;
-                    temp = realloc(moveList, (movedParticles + 1) * sizeof(int*));
-                    moveList = temp;
-                    temp = NULL;
-                    moveList[movedParticles] = calloc(3, sizeof(int));
+                    moveList = (int**)realloc(moveList, (movedParticles + 1) * sizeof(int*));
+                    moveList[movedParticles] = calloc(6, sizeof(int));
+
+                    for(int k = 3; k < 6; ++k){
+                        moveList[movedParticles][k] = pos[k]-d[k];
+                    }
+
                     for(int k = 0; k < 3; ++k){
-                        moveList[movedParticles][i] = pos[i];
+                        if(checkedValue != ACTIVE_PARTICLE){
+                            moveList[movedParticles][k] = pos[k];
+                        }
+                        else{
+                            moveList[movedParticles][k] = moveList[movedParticles][k-3];
+                        }
                     }
                     ++movedParticles;
-                    st->universe[i][j] = EMPTY_CELL;
+                    // st->universe[i][j] = EMPTY_CELL;
                 }
             }
             // CHECK NEIGHBORS
@@ -186,10 +194,12 @@ void updateParticlePositions(state* st, context* ctx){
         }
     }
     for(int i = 0; i < movedParticles; ++i){
-        // st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] = ACTIVE_PARTICLE;
+        st->universe[moveList[i][5]][moveList[i][4] * ctx->max[0] + moveList[i][3]] = EMPTY_CELL;
+        st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] = ACTIVE_PARTICLE;
     }
+    free(moveList);
     if(ctx->rank == 0){
-        printf("=============\n");
+        printf("====== %u =======\n", st->activeParticles);
         fflush(NULL);
     }
 }
@@ -237,6 +247,7 @@ void initState(state** st, context* ctx){
     (*st)->universe = malloc(ctx->planesPerRank * sizeof(char*));
     for(int i = 0; i < ctx->planesPerRank; ++i){
         (*st)->universe[i] = calloc(ctx->max[0] * ctx->max[1], sizeof(char));
+        memset((*st)->universe[i], EMPTY_CELL, ctx->max[0] * ctx->max[1] * sizeof(char));
     }
 
     if(ctx->rank == 0){
