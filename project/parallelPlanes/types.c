@@ -129,15 +129,15 @@ void updateParticlePositions(state* st, context* ctx){
     int* pos = calloc(3, sizeof(int));
     for(int i = 0; i < ctx->planesPerRank; ++i){
         for(int j = 0; j < ctx->max[0] * ctx->max[1]; ++j){
-            if(st->universe[i][j] >= ACTIVE_PARTICLE && st->universe[i][j] < AGGREGATOR_PARTICLE){
+            if(st->universe[i][j] >= ACTIVE_PARTICLE && st->universe[i][j] < ACTIVE_PARTICLE + CELL_MAX){
                 pos[0] = j % ctx->max[0];
                 pos[1] =  (j - pos[0]) / ctx->max[1];
                 pos[2] = i;
                 if(ctx->rank == 0){
-                    // printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
-                    // fflush(NULL);
+                    printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
+                    fflush(NULL);
                 }
-                int particlesOnTile = st->universe[i][j];
+                int particlesOnTile = st->universe[i][j] - (ACTIVE_PARTICLE - 1);
                 st->universe[i][j] = EMPTY_CELL;
                 for(int g = 0; g < particlesOnTile; ++g){
                     num = rand() % 6;
@@ -172,7 +172,7 @@ void updateParticlePositions(state* st, context* ctx){
                         fflush(NULL);
                         --st->activeParticles;
                     }
-                    else{
+                    else if(checkedValue < ACTIVE_PARTICLE + CELL_MAX){
                         moveList = (int**)realloc(moveList, (movedParticles + 1) * sizeof(int*));
                         moveList[movedParticles] = calloc(4, sizeof(int));
 
@@ -182,6 +182,9 @@ void updateParticlePositions(state* st, context* ctx){
 
                         ++movedParticles;
                     }
+                    else{
+                        --j;
+                    }
                 }
             }
             // CHECK NEIGHBORS
@@ -189,15 +192,20 @@ void updateParticlePositions(state* st, context* ctx){
         }
     }
     for(int i = 0; i < movedParticles; ++i){
-        st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] += ACTIVE_PARTICLE;
+        if(st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] == EMPTY_CELL){
+            st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] = ACTIVE_PARTICLE;
+        }
+        else{
+            st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] += 1;
+        }
         free(moveList[i]);
     }
     free(moveList);
     free(pos);
     free(d);
     if(ctx->rank == 0){
-        // printf("====== %u =======\n", st->activeParticles);
-        // fflush(NULL);
+        printf("====== %u =======\n", st->activeParticles);
+        fflush(NULL);
     }
     // sleep(1);
 }
@@ -258,10 +266,15 @@ void initState(state** st, context* ctx){
         // printf("ID: %d, CHECKING %d %d %d\n", i, pos[0], pos[1], pos[2]);
         // fflush(NULL);
         int checkVal = (*st)->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]];
-        if(checkVal <= CELL_MAX){
+        if(checkVal <= ACTIVE_PARTICLE + CELL_MAX){
             // printf("ID: %d, PLACING PARTICLE\n", i);
             // fflush(NULL);
-            initParticle(*st, ctx, pos, checkVal + 1);
+            if(checkVal == 0){
+                initParticle(*st, ctx, pos, ACTIVE_PARTICLE);
+            }
+            else{
+                initParticle(*st, ctx, pos, checkVal + 1);
+            }
         }
         else{
             // printf("ID: %d, OVERLAP\n", i);
