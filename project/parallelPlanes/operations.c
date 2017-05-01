@@ -7,24 +7,12 @@ void stepSystem(state* st, context* ctx){
     // printf("STEP %u\n", st->simSteps);
     fflush(NULL);
     updateParticlePositions(st, ctx);
-    // for(i = 0; i < st->activeParticles; ++i){
-    // 	//MPI_Barrier(MPI_COMM_WORLD);
-    //     uint collisionCheck = st->activeParticles;
-    //     updateParticlePosition(st, ctx);
-    //     //printf("STEP SYSTEM STUCK HERE %d. %d RANK \n", i, mpi_rank);
-    //     fflush(NULL);
-    //     if(collisionCheck != st->activeParticles){
-    //         //printf("HERE\n");
-    //         //printf("STEP %u: COLLISION DETECTED AND ACCOUNTED FOR\n", st->simSteps);
 
-    //         --i;
-    //         //printf("%d is the index checked, %d is the number of activeParticles\n", i, st->activeParticles);
-    //     }
-    // }
-    //printf("FINSHED STEP SYSTEM, %d active particle count\n", st->activeParticles);
 }
 
 void runSystem(state* st, context* ctx){
+    int cont = 1;
+    int temp = 1;
     MPI_Barrier(MPI_COMM_WORLD);
     //printf("%d\n", st->activeParticles);
     if(ctx->numSteps > 0){
@@ -38,19 +26,28 @@ void runSystem(state* st, context* ctx){
         }
     }
     else{
-        while(st->activeParticles > 0){
+        while(cont == 1){
+            MPI_Request request;
             fflush(NULL);
             stepSystem(st, ctx);
             ++st->simSteps;
             if(st->simSteps % ctx->chkFreq == 0){
-                if(ctx->rank == 0){
-                    // printf("%u\n", st->activeParticles);
-                    // printf("=====STEP %d:=====\n", st->simSteps);
-                    // printState(st, ctx);
-                }
-                //MPI_Barrier(MPI_COMM_WORLD);
+                // if(ctx->rank == 0){
+                // }
             }
-            
+            cont = 0;
+            if(st->activeParticles > 0){
+                for(int i = 0; i < ctx->comm_size; i++){
+                    MPI_Request request2;
+                    MPI_Isend(&temp, 1, MPI_INT, i, 234, MPI_COMM_WORLD, &request2);
+
+                //MPI_Isend(st->ctab, st->collidedParticles, particle, i, 123, MPI_COMM_WORLD, &request);
+                }
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Irecv(&cont, 1, MPI_INT, MPI_ANY_SOURCE, 234, MPI_COMM_WORLD, &request);
+            MPI_Barrier(MPI_COMM_WORLD);
+
         }
     }
     //MPI_Barrier(MPI_COMM_WORLD);

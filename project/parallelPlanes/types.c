@@ -144,9 +144,9 @@ void updateGhostRows(state* st, context* ctx){
             MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 1, MPI_COMM_WORLD, &recv1);
     MPI_Irecv(buff2, ctx->max[0] * ctx->max[1], 
             MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &recv2);
-    printf("=============================\n");
+    // printf("=============================\n");
     for(int i = 0; i < ctx->max[0] * ctx->max[1]; ++i){
-        printf("%d ", buff1[i]);
+        // printf("%d ", buff1[i]);
         if(st->universe[1][i] >= EMPTY_CELL){
             st->universe[1][i] += buff2[i];
         }
@@ -157,7 +157,7 @@ void updateGhostRows(state* st, context* ctx){
         st->universe[0][i] = EMPTY_CELL;
         st->universe[ctx->planesPerRank + 1][i] = EMPTY_CELL;
     }
-    printf("\n=============================\n");
+    // printf("\n=============================\n");
 }
 
 
@@ -179,7 +179,7 @@ void updateParticlePositions(state* st, context* ctx){
                 pos[1] =  (j - pos[0]) / ctx->max[1];
                 pos[2] = i;
                 if(ctx->rank == 0){
-                    printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
+                    // printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
                     fflush(NULL);
                 }
                 int particlesOnTile = st->universe[i][j] - (ACTIVE_PARTICLE - 1);
@@ -250,7 +250,7 @@ void updateParticlePositions(state* st, context* ctx){
     free(pos);
     free(d);
     if(ctx->rank == 0){
-        printf("====== %u =======\n", st->activeParticles);
+        //printf("====== %u =======\n", st->activeParticles);
         fflush(NULL);
     }
     // sleep(1);
@@ -272,7 +272,7 @@ void initContext(context** ctx, int* data){
     (*ctx)->chkFreq = data[2];
     (*ctx)->humanOutput = data[3];
 
-    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 4;
+    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 32;
     
 
     (*ctx)->planesPerRank = (*ctx)->max[2]/(*ctx)->comm_size;
