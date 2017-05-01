@@ -146,15 +146,11 @@ void updateGhostRows(state* st, context* ctx){
             MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &recv2);
     
     for(int i = 0; i < ctx->max[0] * ctx->max[1]; ++i){
-        st->universe[1][i] += buff1[i];
-        st->universe[ctx->planesPerRank][i] += buff2[i];
-        if(buff1[i] >= EMPTY_CELL){
-            // printf("B1: %d\n", buff1[i]);
-            st->activeParticles += buff1[i];
+        if(st->universe[1][i] >= EMPTY_CELL){
+            st->universe[1][i] += buff1[i];
         }
-        if(buff2[i] >= EMPTY_CELL){
-            // printf("B2: %d\n", buff2[i]);
-            st->activeParticles += buff2[i];
+        if(st->universe[ctx->planesPerRank][i] >= EMPTY_CELL){
+            st->universe[ctx->planesPerRank][i] += buff2[i];
         }
 
         st->universe[0][i] = EMPTY_CELL;
@@ -217,7 +213,6 @@ void updateParticlePositions(state* st, context* ctx){
                         st->universe[i][j] = COLLIDED_PARTICLE;
                         // printf("HERE<<<<<<<<<<<<<<<<<<<<<<<\n");
                         fflush(NULL);
-                        --st->activeParticles;
                     }
                     else if(checkedValue < ACTIVE_PARTICLE + CELL_MAX){
                         moveList = (int**)realloc(moveList, (movedParticles + 1) * sizeof(int*));
@@ -238,10 +233,9 @@ void updateParticlePositions(state* st, context* ctx){
             // MOVE PARTICLE
         }
     }
+
+    st->activeParticles = movedParticles;
     for(int i = 0; i < movedParticles; ++i){
-        if(moveList[i][2] == 0 || moveList[i][2] == ctx->planesPerRank + 1){
-            --st->activeParticles;
-        }
         if(st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] == EMPTY_CELL){
             st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] = ACTIVE_PARTICLE;
         }
