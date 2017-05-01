@@ -57,9 +57,8 @@ int main(int argc, char* argv[]){
     // //     printState(st, ctx);
     runSystem(st, ctx);
     
-    // printSimulationResults(st, ctx);
+    printSimulationResults(st, ctx);
     MPI_Barrier(MPI_COMM_WORLD);
-    printf("%d THIS IS THE RANK\n", ctx->rank);
     destroyState(&st, ctx);
     MPI_Finalize();
     exit(0);

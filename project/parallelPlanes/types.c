@@ -6,10 +6,10 @@ int numParts;
 int temp = -1;
 
 void initParticle(state* st, context* ctx, int* pos, int value){
-    if(ctx->rank == 0){
-        printf("POS: %d\n", pos[2]);
-        fflush(NULL);
-    }
+    // if(ctx->rank == 0){
+    //     printf("POS: %d\n", pos[2]);
+    //     fflush(NULL);
+    // }
     st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]] = value;
 }
 
@@ -133,10 +133,10 @@ void updateParticlePositions(state* st, context* ctx){
                 pos[0] = j % ctx->max[0];
                 pos[1] =  (j - pos[0]) / ctx->max[1];
                 pos[2] = i;
-                if(ctx->rank == 0){
-                    printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
-                    fflush(NULL);
-                }
+                // if(ctx->rank == 0){
+                //     printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
+                //     fflush(NULL);
+                // }
                 int particlesOnTile = st->universe[i][j];
                 st->universe[i][j] = EMPTY_CELL;
                 for(int g = 0; g < particlesOnTile; ++g){
@@ -192,10 +192,10 @@ void updateParticlePositions(state* st, context* ctx){
         st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] += ACTIVE_PARTICLE;
     }
     free(moveList);
-    if(ctx->rank == 0){
-        printf("====== %u =======\n", st->activeParticles);
-        fflush(NULL);
-    }
+    // if(ctx->rank == 0){
+    //     printf("====== %u =======\n", st->activeParticles);
+    //     fflush(NULL);
+    // }
 }
 
 
@@ -214,7 +214,7 @@ void initContext(context** ctx, int* data){
     (*ctx)->chkFreq = data[2];
     (*ctx)->humanOutput = data[3];
 
-    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 4;
+    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 16;
     
 
     (*ctx)->planesPerRank = (*ctx)->max[2]/(*ctx)->comm_size;
@@ -232,10 +232,10 @@ void initState(state** st, context* ctx){
     
     size_t planeMalloc = ctx->planesPerRank * sizeof(char*);
     size_t innerPlaneMalloc = ctx->max[0]  * ctx->max[1] * sizeof(char);
-    if(ctx->rank == 0){
-        printf("Beginning allocation of %u planes of size %zu\n", ctx->planesPerRank, innerPlaneMalloc);
-        fflush(NULL);
-    }
+    // if(ctx->rank == 0){
+    //     printf("Beginning allocation of %u planes of size %zu\n", ctx->planesPerRank, innerPlaneMalloc);
+    //     fflush(NULL);
+    // }
     //We use a double pointer that is a representation of planes of our simulation. This is a compromise for 
     //Memory conservation's sake:
     (*st)->universe = malloc(ctx->planesPerRank * sizeof(char*));
@@ -244,10 +244,10 @@ void initState(state** st, context* ctx){
         memset((*st)->universe[i], EMPTY_CELL, ctx->max[0] * ctx->max[1] * sizeof(char));
     }
 
-    if(ctx->rank == 0){
-        printf("ALLOCATION COMPLETE\n");
-        fflush(NULL);
-    }
+    // if(ctx->rank == 0){
+    //     printf("ALLOCATION COMPLETE\n");
+    //     fflush(NULL);
+    // }
 
     int i;
 
@@ -298,14 +298,16 @@ void initAggregators(state* st, context* ctx, char* agFile){
 
 
 void printState(state* st, context* ctx){
-    // printf("ACTIVE PARTICLES:\n =========================\n");
-    int i;
-    for(i = 0; i < st->activeParticles; ++i){
-        printParticle(&(st->ptab[i]), ctx->humanOutput);
-    }
-    for(i = 0; i < st->collidedParticles; ++i){
-        printf("HERE");
-        printParticle(&(st->ctab[i]), ctx->humanOutput);
-        //printf("%d\n", st->collidedParticles);
+   int* pos = calloc(3, sizeof(int));
+    for(int i = 0; i < ctx->planesPerRank; ++i){
+        for(int j = 0; j < ctx->max[0] * ctx->max[1]; ++j){
+            if(st->universe[i][j] >= AGGREGATOR_PARTICLE){
+                pos[0] = j % ctx->max[0];
+                pos[1] =  (j - pos[0]) / ctx->max[1];
+                pos[2] = i;
+                printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[i][j]);
+                fflush(NULL);
+            }
+        }
     }
 }
