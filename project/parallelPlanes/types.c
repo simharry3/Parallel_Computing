@@ -6,7 +6,11 @@ int numParts;
 int temp = -1;
 
 void initParticle(state* st, context* ctx, int* pos, int value){
-    st->universe[0][pos[1] * ctx->max[0] + pos[0]] = value;
+    if(ctx->rank == 0){
+        printf("POS: %d\n", pos[2]);
+        fflush(NULL);
+    }
+    st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]] = value;
 }
 
 void printParticle(particle* p, int readability){
@@ -28,15 +32,8 @@ int checkLocations(particle* p1, particle* p2){
             p1->z == p2->z;
 }
 
-int checkParticleCollision(state* st, particle* p){
-    int i;
-    for(i = 0; i < st->collidedParticles; ++i){
-
-        if(checkLocations(p, &(st->ctab[i]))){
-            return 1;
-        }
-    }
-    return 0;
+int checkParticleCollision(state* st, context* ctx, int* pos){
+    return  st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]];
 }
 
 void updateCollision(particle* cols, state* st, MPI_Datatype particle, context* ctx){
@@ -56,26 +53,26 @@ void updateCollision(particle* cols, state* st, MPI_Datatype particle, context* 
  
 }
 
-void capParticle(context* ctx, particle* p){
-    if(p->x > ctx->max[0]){
-        p->x = ctx->max[0];
+void capPosition(context* ctx, int** pos){
+    if((*pos)[0] > ctx->max[0] - 1){
+        (*pos)[0] = ctx->max[0] - 1;
     }
-    else if(p->x < 0){
-        p->x = 0;
-    }
-
-    if(p->y > ctx->max[1]){
-        p->y = ctx->max[1];
-    }
-    else if(p->y < 0){
-        p->y = 0;
+    else if((*pos)[0] < 0){
+        (*pos)[0] = 0;
     }
 
-    if(p->z > ctx->max[2]){
-        p->z = ctx->max[2];
+    if((*pos)[1] > ctx->max[1] - 1){
+        (*pos)[1] = ctx->max[1] - 1;
     }
-    else if(p->z < 0){
-        p->z = 0;
+    else if((*pos)[1] < 0){
+        (*pos)[1] = 0;
+    }
+
+    if((*pos)[2] > ctx->planesPerRank - 1){
+        (*pos)[2] = ctx->planesPerRank - 1;
+    }
+    else if((*pos)[2] < 0){
+        (*pos)[2] = 0;
     }
 }
 
@@ -127,68 +124,74 @@ void updateParticlePositions(state* st, context* ctx){
     int num;
     int dx, dy, dz;
     dx = dy = dz = 0;
+    int** moveList = NULL;
+    int movedParticles = 0;
     int* pos = calloc(3, sizeof(int));
     for(int i = 0; i < ctx->planesPerRank; ++i){
         for(int j = 0; j < ctx->max[0] * ctx->max[1]; ++j){
-            pos[0] = j % ctx->max[0];
-            pos[1] =  (j - pos[0]) / ctx->max[1];
-            pos[2] = i;
-            // printf("%d %d %d\n", pos[0], pos[1], pos[2]);
-            num = rand() % 6;
-            switch(num){
-                case 0:
-                    dx = -1;
-                    break;
-                case 1:
-                    dx = 1;
-                    break;
-                case 2:
-                    dy = -1;
-                    break;
-                case 3:
-                    dy = 1;
-                    break;
-                case 4:
-                    dz = -1;
-                    break;
-                case 5:
-                    dz = 1;
-                    break;
+            if(st->universe[i][j] == ACTIVE_PARTICLE){
+                pos[0] = j % ctx->max[0];
+                pos[1] =  (j - pos[0]) / ctx->max[1];
+                pos[2] = i;
+                if(ctx->rank == 0){
+                    printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
+                    fflush(NULL);
+                }
+                num = rand() % 6;
+                switch(num){
+                    case 0:
+                        dx = -1;
+                        break;
+                    case 1:
+                        dx = 1;
+                        break;
+                    case 2:
+                        dy = -1;
+                        break;
+                    case 3:
+                        dy = 1;
+                        break;
+                    case 4:
+                        dz = -1;
+                        break;
+                    case 5:
+                        dz = 1;
+                        break;
+                }
+                pos[0] += dx;
+                pos[1] += dy;
+                pos[2] += dz;
+                capPosition(ctx, &pos);
+                if(checkParticleCollision(st, ctx, pos) > ACTIVE_PARTICLE){
+                    st->universe[i][j] = COLLIDED_PARTICLE;
+                    // printf("HERE<<<<<<<<<<<<<<<<<<<<<<<\n");
+                    fflush(NULL);
+                    --st->activeParticles;
+                }
+                else{
+                    int** temp;
+                    temp = realloc(moveList, (movedParticles + 1) * sizeof(int*));
+                    moveList = temp;
+                    temp = NULL;
+                    moveList[movedParticles] = calloc(3, sizeof(int));
+                    for(int k = 0; k < 3; ++k){
+                        moveList[movedParticles][i] = pos[i];
+                    }
+                    ++movedParticles;
+                    st->universe[i][j] = EMPTY_CELL;
+                }
             }
-            pos[0] += dx;
-            pos[1] += dy;
-            pos[2] += dz;
+            // CHECK NEIGHBORS
+            // MOVE PARTICLE
         }
     }
-
-    //MPI_Barrier(MPI_COMM_WORLD);
-    // updateCollision(st->ctab, st, ctx);
-    // if(!checkParticleCollision(st, p)){
-    // //Check for collision here
-    //     capParticle(ctx, p);
-    // }
-    // else{
-    //     p->x -= dx;
-    //     p->y -= dy;
-    //     p->z -= dz;
-    //     //printParticle(p);
-    //     addCollidedParticle(st, p);
-    //     int i;
-    //     for(i = 0; i < ctx->comm_size; i++)
-    //         if(i != my_rank){
-    //             MPI_Isend(&(st->collidedParticles), 1, MPI_INT, i, 124, MPI_COMM_WORLD, &request);
-
-    //             //MPI_Isend(st->ctab, st->collidedParticles, particle, i, 123, MPI_COMM_WORLD, &request);
-    //         }
-
-        //MPI_Bcast((void *)&(st->collidedParticles), 1, MPI_INT, my_rank, MPI_COMM_WORLD);
-        //MPI_Bcast(st->ctab, st->collidedParticles, particle, my_rank, MPI_COMM_WORLD);
-
-    // }
-    //printParticle(p);
-
-    //Check for collision here
-    // if collision call MPI_Isend
+    for(int i = 0; i < movedParticles; ++i){
+        // st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] = ACTIVE_PARTICLE;
+    }
+    if(ctx->rank == 0){
+        printf("=============\n");
+        fflush(NULL);
+    }
 }
 
 
@@ -243,14 +246,15 @@ void initState(state** st, context* ctx){
 
     int i;
 
-    for(i = 0; i < ctx->numParticles; ++i){
+    for(i = 0; i < ctx->particlesPerRank; ++i){
         pos[0] = rand() % ctx->max[0];
         pos[1] = rand() % ctx->max[1];
-        pos[2] = rand() % ctx->max[2];
+        pos[2] = rand() % ctx->planesPerRank;
         initParticle(*st, ctx, pos, ACTIVE_PARTICLE);
     }
 
-    (*st)->activeParticles = ctx->numParticles;
+    (*st)->activeParticles = ctx->particlesPerRank;
+    //  printf("PPR: %u\n", (*st)->activeParticles);
     (*st)->collidedParticles = 0;
     (*st)->simSteps = 0;
     //printState(*st, ctx);
@@ -278,7 +282,7 @@ void initAggregators(state* st, context* ctx, char* agFile){
     fp = fopen(agFile, "r");
     while(fscanf(fp, "%d %d %d", &pos[0], &pos[1], &pos[2]) != EOF){
         // st->ctab = realloc(st->ctab, (st->collidedParticles + 1) * sizeof(particle));
-        initParticle(st, ctx, pos, COLLIDED_PARTICLE);
+        initParticle(st, ctx, pos, AGGREGATOR_PARTICLE);
         // ++st->collidedParticles;
     }
     free(pos);

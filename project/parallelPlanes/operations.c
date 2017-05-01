@@ -44,6 +44,7 @@ void runSystem(state* st, context* ctx){
             ++st->simSteps;
             if(st->simSteps % ctx->chkFreq == 0){
                 if(ctx->rank == 0){
+                    // printf("%u\n", st->activeParticles);
                     // printf("=====STEP %d:=====\n", st->simSteps);
                     // printState(st, ctx);
                 }

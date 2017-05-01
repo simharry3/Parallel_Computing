@@ -7,8 +7,10 @@
 #include <time.h> //Needed for RNG 
 #include <mpi.h>
 
+#define EMPTY_CELL 0
 #define ACTIVE_PARTICLE 1
-#define COLLIDED_PARTICLE 2
+#define AGGREGATOR_PARTICLE 2
+#define COLLIDED_PARTICLE 3
 
 typedef double real;
 
