@@ -31,7 +31,7 @@ int main(int argc, char* argv[]){
     // // if(mpi_rank == 0)
     // //     printState(st, ctx);
     runSystem(st, ctx);
-    
+    MPI_Barrier(MPI_COMM_WORLD);
     printSimulationResults(st, ctx);
     MPI_Barrier(MPI_COMM_WORLD);
     destroyState(&st, ctx);
