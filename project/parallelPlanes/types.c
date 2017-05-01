@@ -358,9 +358,11 @@ void initAggregators(state* st, context* ctx, char* agFile){
     FILE* fp;
     fp = fopen(agFile, "r");
     while(fscanf(fp, "%d %d %d", &pos[0], &pos[1], &pos[2]) != EOF){
-        pos[2] += 1;
-        // st->ctab = realloc(st->ctab, (st->collidedParticles + 1) * sizeof(particle));
-        initParticle(st, ctx, pos, AGGREGATOR_PARTICLE);
+        pos[2];
+        st->ctab = realloc(st->ctab, (st->collidedParticles + 1) * sizeof(particle));
+        if(ctx->rank == pos[2]/ctx->planesPerRank){
+            initParticle(st, ctx, pos, AGGREGATOR_PARTICLE);
+        }
         // ++st->collidedParticles;
     }
     free(pos);
