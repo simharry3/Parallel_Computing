@@ -9,8 +9,8 @@
 
 #define EMPTY_CELL 0
 #define ACTIVE_PARTICLE 1
-#define AGGREGATOR_PARTICLE 2
-#define COLLIDED_PARTICLE 3
+#define AGGREGATOR_PARTICLE 9
+#define COLLIDED_PARTICLE 10
 
 typedef double real;
 

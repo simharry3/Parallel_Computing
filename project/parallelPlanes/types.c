@@ -129,7 +129,7 @@ void updateParticlePositions(state* st, context* ctx){
     int* pos = calloc(3, sizeof(int));
     for(int i = 0; i < ctx->planesPerRank; ++i){
         for(int j = 0; j < ctx->max[0] * ctx->max[1]; ++j){
-            if(st->universe[i][j] == ACTIVE_PARTICLE){
+            if(st->universe[i][j] >= ACTIVE_PARTICLE && st->universe[i][j] < AGGREGATOR_PARTICLE){
                 pos[0] = j % ctx->max[0];
                 pos[1] =  (j - pos[0]) / ctx->max[1];
                 pos[2] = i;
@@ -137,56 +137,51 @@ void updateParticlePositions(state* st, context* ctx){
                     printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
                     fflush(NULL);
                 }
-                num = rand() % 6;
-                switch(num){
-                    case 0:
-                        d[0] = -1;
-                        break;
-                    case 1:
-                        d[0] = 1;
-                        break;
-                    case 2:
-                        d[1] = -1;
-                        break;
-                    case 3:
-                        d[1] = 1;
-                        break;
-                    case 4:
-                        d[2] = -1;
-                        break;
-                    case 5:
-                        d[2] = 1;
-                        break;
-                }
-                pos[0] += d[0];
-                pos[1] += d[1];
-                pos[2] += d[2];
-                capPosition(ctx, &pos);
-                int checkedValue = checkParticleCollision(st, ctx, pos);
-                if(checkedValue == AGGREGATOR_PARTICLE || checkedValue == COLLIDED_PARTICLE){
-                    st->universe[i][j] = COLLIDED_PARTICLE;
-                    // printf("HERE<<<<<<<<<<<<<<<<<<<<<<<\n");
-                    fflush(NULL);
-                    --st->activeParticles;
-                }
-                else{
-                    moveList = (int**)realloc(moveList, (movedParticles + 1) * sizeof(int*));
-                    moveList[movedParticles] = calloc(6, sizeof(int));
-
-                    for(int k = 3; k < 6; ++k){
-                        moveList[movedParticles][k] = pos[k]-d[k];
+                int particlesOnTile = st->universe[i][j];
+                st->universe[i][j] = EMPTY_CELL;
+                for(int g = 0; g < particlesOnTile; ++g){
+                    num = rand() % 6;
+                    switch(num){
+                        case 0:
+                            d[0] = -1;
+                            break;
+                        case 1:
+                            d[0] = 1;
+                            break;
+                        case 2:
+                            d[1] = -1;
+                            break;
+                        case 3:
+                            d[1] = 1;
+                            break;
+                        case 4:
+                            d[2] = -1;
+                            break;
+                        case 5:
+                            d[2] = 1;
+                            break;
                     }
+                    pos[0] += d[0];
+                    pos[1] += d[1];
+                    pos[2] += d[2];
+                    capPosition(ctx, &pos);
+                    int checkedValue = checkParticleCollision(st, ctx, pos);
+                    if(checkedValue == AGGREGATOR_PARTICLE || checkedValue == COLLIDED_PARTICLE){
+                        st->universe[i][j] = COLLIDED_PARTICLE;
+                        // printf("HERE<<<<<<<<<<<<<<<<<<<<<<<\n");
+                        fflush(NULL);
+                        --st->activeParticles;
+                    }
+                    else{
+                        moveList = (int**)realloc(moveList, (movedParticles + 1) * sizeof(int*));
+                        moveList[movedParticles] = calloc(4, sizeof(int));
 
-                    for(int k = 0; k < 3; ++k){
-                        if(checkedValue != ACTIVE_PARTICLE){
+                        for(int k = 0; k < 3; ++k){
                             moveList[movedParticles][k] = pos[k];
                         }
-                        else{
-                            moveList[movedParticles][k] = moveList[movedParticles][k-3];
-                        }
+
+                        ++movedParticles;
                     }
-                    ++movedParticles;
-                    // st->universe[i][j] = EMPTY_CELL;
                 }
             }
             // CHECK NEIGHBORS
@@ -194,8 +189,7 @@ void updateParticlePositions(state* st, context* ctx){
         }
     }
     for(int i = 0; i < movedParticles; ++i){
-        st->universe[moveList[i][5]][moveList[i][4] * ctx->max[0] + moveList[i][3]] = EMPTY_CELL;
-        st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] = ACTIVE_PARTICLE;
+        st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] += ACTIVE_PARTICLE;
     }
     free(moveList);
     if(ctx->rank == 0){
@@ -220,7 +214,7 @@ void initContext(context** ctx, int* data){
     (*ctx)->chkFreq = data[2];
     (*ctx)->humanOutput = data[3];
 
-    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 16;
+    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 4;
     
 
     (*ctx)->planesPerRank = (*ctx)->max[2]/(*ctx)->comm_size;
