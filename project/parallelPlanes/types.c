@@ -133,10 +133,10 @@ void updateParticlePositions(state* st, context* ctx){
                 pos[0] = j % ctx->max[0];
                 pos[1] =  (j - pos[0]) / ctx->max[1];
                 pos[2] = i;
-                // if(ctx->rank == 0){
-                //     printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
-                //     fflush(NULL);
-                // }
+                if(ctx->rank == 0){
+                    // printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]]);
+                    // fflush(NULL);
+                }
                 int particlesOnTile = st->universe[i][j];
                 st->universe[i][j] = EMPTY_CELL;
                 for(int g = 0; g < particlesOnTile; ++g){
@@ -190,12 +190,16 @@ void updateParticlePositions(state* st, context* ctx){
     }
     for(int i = 0; i < movedParticles; ++i){
         st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] += ACTIVE_PARTICLE;
+        free(moveList[i]);
     }
     free(moveList);
-    // if(ctx->rank == 0){
-    //     printf("====== %u =======\n", st->activeParticles);
-    //     fflush(NULL);
-    // }
+    free(pos);
+    free(d);
+    if(ctx->rank == 0){
+        // printf("====== %u =======\n", st->activeParticles);
+        // fflush(NULL);
+    }
+    // sleep(1);
 }
 
 
@@ -214,7 +218,7 @@ void initContext(context** ctx, int* data){
     (*ctx)->chkFreq = data[2];
     (*ctx)->humanOutput = data[3];
 
-    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 32;
+    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 4;
     
 
     (*ctx)->planesPerRank = (*ctx)->max[2]/(*ctx)->comm_size;
@@ -226,16 +230,12 @@ void initState(state** st, context* ctx){
     *st = calloc(1, sizeof(state));
     int* pos = (int*)calloc(3, sizeof(int));
     
-    //Random Variable Initialization
-    time_t t;
-    srand((unsigned) time(&t));
-    
     size_t planeMalloc = ctx->planesPerRank * sizeof(char*);
     size_t innerPlaneMalloc = ctx->max[0]  * ctx->max[1] * sizeof(char);
-    // if(ctx->rank == 0){
-    //     printf("Beginning allocation of %u planes of size %zu\n", ctx->planesPerRank, innerPlaneMalloc);
-    //     fflush(NULL);
-    // }
+    if(ctx->rank == 0){
+        // printf("Beginning allocation of %u planes of size %zu\n", ctx->planesPerRank, innerPlaneMalloc);
+        // fflush(NULL);
+    }
     //We use a double pointer that is a representation of planes of our simulation. This is a compromise for 
     //Memory conservation's sake:
     (*st)->universe = malloc(ctx->planesPerRank * sizeof(char*));
@@ -244,10 +244,10 @@ void initState(state** st, context* ctx){
         memset((*st)->universe[i], EMPTY_CELL, ctx->max[0] * ctx->max[1] * sizeof(char));
     }
 
-    // if(ctx->rank == 0){
-    //     printf("ALLOCATION COMPLETE\n");
-    //     fflush(NULL);
-    // }
+    if(ctx->rank == 0){
+        // printf("ALLOCATION COMPLETE\n");
+        // fflush(NULL);
+    }
 
     int i;
 
@@ -255,13 +255,26 @@ void initState(state** st, context* ctx){
         pos[0] = rand() % ctx->max[0];
         pos[1] = rand() % ctx->max[1];
         pos[2] = rand() % ctx->planesPerRank;
-        initParticle(*st, ctx, pos, ACTIVE_PARTICLE);
+        // printf("ID: %d, CHECKING %d %d %d\n", i, pos[0], pos[1], pos[2]);
+        // fflush(NULL);
+        int checkVal = (*st)->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]];
+        if(checkVal <= CELL_MAX){
+            // printf("ID: %d, PLACING PARTICLE\n", i);
+            // fflush(NULL);
+            initParticle(*st, ctx, pos, checkVal + 1);
+        }
+        else{
+            // printf("ID: %d, OVERLAP\n", i);
+            // fflush(NULL);
+            --i;
+        }
     }
 
     (*st)->activeParticles = ctx->particlesPerRank;
     //  printf("PPR: %u\n", (*st)->activeParticles);
     (*st)->collidedParticles = 0;
     (*st)->simSteps = 0;
+    free(pos);
     //printState(*st, ctx);
 }
 
@@ -301,7 +314,7 @@ void printState(state* st, context* ctx){
    int* pos = calloc(3, sizeof(int));
     for(int i = 0; i < ctx->planesPerRank; ++i){
         for(int j = 0; j < ctx->max[0] * ctx->max[1]; ++j){
-            if(st->universe[i][j] >= AGGREGATOR_PARTICLE){
+            if(st->universe[i][j] > EMPTY_CELL){
                 pos[0] = j % ctx->max[0];
                 pos[1] =  (j - pos[0]) / ctx->max[1];
                 pos[2] = i;
@@ -310,4 +323,5 @@ void printState(state* st, context* ctx){
             }
         }
     }
+    free(pos);
 }
