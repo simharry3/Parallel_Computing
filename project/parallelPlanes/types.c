@@ -5,6 +5,8 @@ int rank;
 int numParts;
 int temp = -1;
 
+
+
 void initParticle(state* st, context* ctx, int* pos, int value){
     // if(ctx->rank == 0){
     //     printf("POS: %d\n", pos[2]);
@@ -12,6 +14,8 @@ void initParticle(state* st, context* ctx, int* pos, int value){
     // }
     st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]] = value;
 }
+
+
 
 void printParticle(particle* p, int readability){
     if(readability == 1){
@@ -25,6 +29,8 @@ void printParticle(particle* p, int readability){
     fflush(NULL);
 }
 
+
+
 //check if two particles have the same location:
 int checkLocations(particle* p1, particle* p2){
     return p1->x == p2->x &&
@@ -32,9 +38,13 @@ int checkLocations(particle* p1, particle* p2){
             p1->z == p2->z;
 }
 
+
+
 int checkParticleCollision(state* st, context* ctx, int* pos){
     return  st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]];
 }
+
+
 
 void updateCollision(particle* cols, state* st, MPI_Datatype particle, context* ctx){
     MPI_Request request;
@@ -76,46 +86,9 @@ void capPosition(context* ctx, int** pos){
     }
 }
 
-void addCollidedParticle(state* st, particle* p){
-    // if(rank == 0)
-    //     printf("PID: %d\n", p->id);
-    ++st->collidedParticles;
-    // particle* tmp;
-    st->ctab = realloc(st->ctab, st->collidedParticles * sizeof(particle));
-    // free(st->ctab);
-    // st->ctab = tmp;
-    // tmp = NULL;
 
-    (st->ctab[st->collidedParticles - 1]).x = p->x;
-    (st->ctab[st->collidedParticles - 1]).y = p->y;
-    (st->ctab[st->collidedParticles - 1]).z = p->z;
-    (st->ctab[st->collidedParticles - 1]).collision = 1;
-    (st->ctab[st->collidedParticles - 1]).id = p->id;
-    // if(rank == 0){
-    //     printf("COLLIDED PARTICLE INFORMATION:\n");
-    //     printParticle(&(st->ctab[st->collidedParticles - 1]));
-    // }
-    
-    fflush(NULL);
 
-    //Scan the list of bodies (up until the end), move the particle we want to remove to the end:
-    if(st->activeParticles > 1){
-        int i;
-        for( i = 0;  i < st->activeParticles - 1; ++i){
-            if(&(st->ptab[i]) == p){
-                st->ptab[i] = st->ptab[st->activeParticles - 1];
-            }
-        }
-        --st->activeParticles;
-        st->ptab = realloc(st->ptab, st->activeParticles * sizeof(particle));
-            // free(st->ptab);
-            // st->ptab = tmp;
-            // tmp = NULL;
-    }
-    else{
-        --st->activeParticles;
-    }
-}
+
 int wrapRank(state* st, context* ctx, int rankIn){
     if(rankIn > ctx->comm_size - 1){
         return 0;
@@ -125,6 +98,10 @@ int wrapRank(state* st, context* ctx, int rankIn){
     }
     return rankIn;
 }
+
+
+
+
 
 void updateGhostRows(state* st, context* ctx){
     MPI_Request send1, send2;
@@ -159,6 +136,8 @@ void updateGhostRows(state* st, context* ctx){
     }
     // printf("\n=============================\n");
 }
+
+
 
 
 void updateParticlePositions(state* st, context* ctx){
@@ -238,10 +217,7 @@ void updateParticlePositions(state* st, context* ctx){
 
     st->activeParticles = movedParticles;
     for(int i = 0; i < movedParticles; ++i){
-        if(st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] == EMPTY_CELL){
-            st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] = ACTIVE_PARTICLE;
-        }
-        else{
+        if(st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] >= EMPTY_CELL){
             st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] += 1;
         }
         free(moveList[i]);
@@ -272,13 +248,15 @@ void initContext(context** ctx, int* data){
     (*ctx)->chkFreq = data[2];
     (*ctx)->humanOutput = data[3];
 
-    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 32;
+    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 16;
     
 
     (*ctx)->planesPerRank = (*ctx)->max[2]/(*ctx)->comm_size;
     (*ctx)->particlesPerRank = (*ctx)->numParticles/(*ctx)->comm_size;
     
 }
+
+
 
 void initState(state** st, context* ctx){
     *st = calloc(1, sizeof(state));
@@ -312,15 +290,10 @@ void initState(state** st, context* ctx){
         // printf("ID: %d, CHECKING %d %d %d\n", i, pos[0], pos[1], pos[2]);
         // fflush(NULL);
         int checkVal = (*st)->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]];
-        if(checkVal <= ACTIVE_PARTICLE + CELL_MAX){
+        if(checkVal >= EMPTY_CELL){
             // printf("ID: %d, PLACING PARTICLE\n", i);
             // fflush(NULL);
-            if(checkVal == 0){
-                initParticle(*st, ctx, pos, ACTIVE_PARTICLE);
-            }
-            else{
                 initParticle(*st, ctx, pos, checkVal + 1);
-            }
         }
         else{
             // printf("ID: %d, OVERLAP\n", i);
@@ -337,6 +310,8 @@ void initState(state** st, context* ctx){
     //printState(*st, ctx);
 }
 
+
+
 void destroyState(state** st, context* ctx){
     for(int i = 0; i < ctx->planesPerRank + 2; ++i){
         free((*st)->universe[i]);
@@ -346,6 +321,8 @@ void destroyState(state** st, context* ctx){
    free((*st));
    st = NULL;
 }
+
+
 
 
 void initAggregators(state* st, context* ctx, char* agFile){
@@ -370,6 +347,8 @@ void initAggregators(state* st, context* ctx, char* agFile){
 
     //printf("READING AGGREGATORS \n");
 }
+
+
 
 
 void printState(state* st, context* ctx){

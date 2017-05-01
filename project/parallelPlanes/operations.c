@@ -10,6 +10,8 @@ void stepSystem(state* st, context* ctx){
 
 }
 
+
+
 void runSystem(state* st, context* ctx){
     int cont = 1;
     int temp = 1;
@@ -52,6 +54,8 @@ void runSystem(state* st, context* ctx){
     }
     //MPI_Barrier(MPI_COMM_WORLD);
 }
+
+
 
 void printSimulationResults(state* st, context* ctx){
         printState(st, ctx);
