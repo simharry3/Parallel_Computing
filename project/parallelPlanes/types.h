@@ -8,9 +8,9 @@
 #include <mpi.h>
 
 #define EMPTY_CELL 0
-#define ACTIVE_PARTICLE 3
-#define AGGREGATOR_PARTICLE 1
-#define COLLIDED_PARTICLE 2
+#define ACTIVE_PARTICLE 1
+#define AGGREGATOR_PARTICLE -1
+#define COLLIDED_PARTICLE -2
 #define CELL_MAX 9
 
 typedef double real;
@@ -51,13 +51,13 @@ typedef struct state{
     particle* ptab;
     particle* ctab;
 
-    char** universe;
+    int** universe;
     //ADD STATE
 }state;
 
 void initParticle(state* st, context* ctx, int* pos, int value);
 void printParticle(particle* p, int readability);
-void updateParticlePosition(state* st, context* ctx);
+void updateParticlePositions(state* st, context* ctx);
 void updateCollision(particle* cols, state* st, MPI_Datatype particle, context* ctx);
 void initAggregators(state* st, context* ctx, char* agFile);
 void initContext(context** ctx, int* data);

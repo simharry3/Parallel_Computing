@@ -116,7 +116,6 @@ void addCollidedParticle(state* st, particle* p){
         --st->activeParticles;
     }
 }
-
 int wrapRank(state* st, context* ctx, int rankIn){
     if(rankIn > ctx->comm_size - 1){
         return 0;
@@ -130,32 +129,32 @@ int wrapRank(state* st, context* ctx, int rankIn){
 void updateGhostRows(state* st, context* ctx){
     MPI_Request send1, send2;
     MPI_Request recv1, recv2;
-    char* buff1 = calloc(ctx->max[0] * ctx->max[1], sizeof(char));
-    char* buff2 = calloc(ctx->max[0] * ctx->max[1], sizeof(char));
+    int* buff1 = calloc(ctx->max[0] * ctx->max[1], sizeof(int));
+    int* buff2 = calloc(ctx->max[0] * ctx->max[1], sizeof(int));
 
     // printf("RANK %d FORWARD RANK: %d BACKWARD RANK: %d \n",
     //         ctx->rank, wrapRank(st, ctx, ctx->rank  + 1), wrapRank(st, ctx, ctx->rank - 1));
 
     MPI_Isend((st->universe[0]), ctx->max[0] * ctx->max[1], 
-            MPI_CHAR, wrapRank(st, ctx, ctx->rank  - 1), 1, MPI_COMM_WORLD, &send1);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 1, MPI_COMM_WORLD, &send1);
     MPI_Isend((st->universe[ctx->planesPerRank + 1]), ctx->max[0] * ctx->max[1], 
-            MPI_CHAR, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &send2);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &send2);
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Irecv(buff1, ctx->max[0] * ctx->max[1], 
-            MPI_CHAR, wrapRank(st, ctx, ctx->rank  - 1), 1, MPI_COMM_WORLD, &recv1);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 1, MPI_COMM_WORLD, &recv1);
     MPI_Irecv(buff2, ctx->max[0] * ctx->max[1], 
-            MPI_CHAR, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &recv2);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &recv2);
     
     for(int i = 0; i < ctx->max[0] * ctx->max[1]; ++i){
         st->universe[1][i] += buff1[i];
-        st->universe[ctx->planesPerRank][i] = buff2[i];
-        if(buff1[i] >= ACTIVE_PARTICLE && buff1[i] < ACTIVE_PARTICLE + CELL_MAX){
-            printf("B1: %d\n", buff1[i]);
-            st->activeParticles += buff1[i] - (ACTIVE_PARTICLE - 1);
+        st->universe[ctx->planesPerRank][i] += buff2[i];
+        if(buff1[i] >= EMPTY_CELL){
+            // printf("B1: %d\n", buff1[i]);
+            st->activeParticles += buff1[i];
         }
-        if(buff2[i] >= ACTIVE_PARTICLE && buff2[i] < ACTIVE_PARTICLE + CELL_MAX){
-            printf("B2: %d\n", buff2[i]);
-            st->activeParticles += buff1[i] - (ACTIVE_PARTICLE - 1);
+        if(buff2[i] >= EMPTY_CELL){
+            // printf("B2: %d\n", buff2[i]);
+            st->activeParticles += buff2[i];
         }
 
         st->universe[0][i] = EMPTY_CELL;
@@ -240,7 +239,7 @@ void updateParticlePositions(state* st, context* ctx){
         }
     }
     for(int i = 0; i < movedParticles; ++i){
-        if(moveList[i][2] == 0 || moveList[i] == ctx->planesPerRank + 1){
+        if(moveList[i][2] == 0 || moveList[i][2] == ctx->planesPerRank + 1){
             --st->activeParticles;
         }
         if(st->universe[moveList[i][2]][moveList[i][1] * ctx->max[0] + moveList[i][0]] == EMPTY_CELL){
@@ -289,18 +288,18 @@ void initState(state** st, context* ctx){
     *st = calloc(1, sizeof(state));
     int* pos = (int*)calloc(3, sizeof(int));
     
-    size_t planeMalloc = ctx->planesPerRank * sizeof(char*);
-    size_t innerPlaneMalloc = ctx->max[0]  * ctx->max[1] * sizeof(char);
+    size_t planeMalloc = ctx->planesPerRank * sizeof(int*);
+    size_t innerPlaneMalloc = ctx->max[0]  * ctx->max[1] * sizeof(int);
     if(ctx->rank == 0){
         // printf("Beginning allocation of %u planes of size %zu\n", ctx->planesPerRank, innerPlaneMalloc);
         // fflush(NULL);
     }
     //We use a double pointer that is a representation of planes of our simulation. This is a compromise for 
     //Memory conservation's sake:
-    (*st)->universe = malloc((ctx->planesPerRank + 2) * sizeof(char*));
+    (*st)->universe = malloc((ctx->planesPerRank + 2) * sizeof(int*));
     for(int i = 0; i < ctx->planesPerRank + 2; ++i){
-        (*st)->universe[i] = calloc(ctx->max[0] * ctx->max[1], sizeof(char));
-        memset((*st)->universe[i], EMPTY_CELL, ctx->max[0] * ctx->max[1] * sizeof(char));
+        (*st)->universe[i] = calloc(ctx->max[0] * ctx->max[1], sizeof(int));
+        memset((*st)->universe[i], EMPTY_CELL, ctx->max[0] * ctx->max[1] * sizeof(int));
     }
 
     if(ctx->rank == 0){
@@ -359,7 +358,7 @@ void initAggregators(state* st, context* ctx, char* agFile){
     //     printf("READING AG DATA FROM FILE: %s\n", agFile);
     
     int* pos = (int*)calloc(3, sizeof(int));
-    char* buff = (char*)calloc(8, sizeof(char));
+    int* buff = (int*)calloc(8, sizeof(int));
     FILE* fp;
     fp = fopen(agFile, "r");
     while(fscanf(fp, "%d %d %d", &pos[0], &pos[1], &pos[2]) != EOF){
@@ -380,7 +379,7 @@ void printState(state* st, context* ctx){
     for(int i = 1; i < ctx->planesPerRank + 1; ++i){
         // printf("%d\n", i);
         for(int j = 0; j < ctx->max[0] * ctx->max[1]; ++j){
-            if(st->universe[i][j] > EMPTY_CELL){
+            if(st->universe[i][j] < EMPTY_CELL){
                 pos[0] = j % ctx->max[0];
                 pos[1] =  (j - pos[0]) / ctx->max[1];
                 pos[2] = ctx->rank * ctx->planesPerRank + i;
