@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h> //Needed for memcpy
 #include <time.h> //Needed for RNG 
+#include <mpi.h>
 
 typedef double real;
 
@@ -13,8 +14,10 @@ typedef struct vec3D{
 }vec3D;
 
 typedef struct particle{
-    vec3D position;
-    uint id;
+    int x;
+    int y;
+    int z;
+    int id;
     int collision;
     //ADD PARTICLE 
 }particle;
@@ -33,7 +36,7 @@ typedef struct state{
     uint activeParticles;
     uint collidedParticles;
     uint simSteps;
-    
+    uint comm_size;
     particle* ptab;
     particle* ctab;
     //ADD STATE
@@ -41,11 +44,11 @@ typedef struct state{
 
 void initParticle(particle* p, int* pos, int id, int collision);
 void printParticle(particle* p, int readability);
-void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank);
-void updateCollision(particle* cols);
-void initAggregators(state* st, char* agFile, int my_rank);
+void updateParticlePosition(state* st, context* ctx, particle* p, int my_rank, MPI_Datatype particle);
+void updateCollision(particle* cols, state* st, MPI_Datatype particle, context* ctx);
+void initAggregators(state* st, char* agFile);
 void initContext(context** ctx, int* data, int comm_size);
-void initState(state** st, context* ctx);
+void initState(state** st, context* ctx, int my_rank, int size);
 void printState(state* st, context* ctx);
 
 #endif /*TYPES_H_*/

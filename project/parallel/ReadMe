@@ -2,3 +2,8 @@ Philip LaGambino and Clayton Rayment
 Project ReadMe
 
 This readMe is for anyone using the Diffustion Limited Aggregation project for parallel computing. 
+
+
+Optional for the make file.
+	mpicc -I. -Wall -O3 -c types.c -o types.o
+	mpicc -I. -Wall -O3 -c operations.c -o operations.o

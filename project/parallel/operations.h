@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include "types.h"
+#include <mpi.h>
 
-void runSystem(state* st, context* ctx, int mpi_rank);
-void stepSystem(state* st, context* ctx, int mpi_rank);
+void runSystem(state* st, context* ctx, int mpi_rank, MPI_Datatype particle);
+void stepSystem(state* st, context* ctx, int mpi_rank, MPI_Datatype particle);
 void printSimulationResults(state* st, context* ctx);
 
 #endif /*_OPERATIONS_H_*/
