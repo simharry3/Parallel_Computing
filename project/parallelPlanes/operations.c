@@ -57,9 +57,7 @@ void runSystem(state* st, context* ctx){
 }
 
 void printSimulationResults(state* st, context* ctx){
-    if(ctx->rank == 0){
         printState(st, ctx);
         // printf("Simulation finished in %u steps\n", st->simSteps);
         fflush(NULL);
-    }
 }
