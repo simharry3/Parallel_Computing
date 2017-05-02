@@ -16,6 +16,8 @@ int main(int argc, char* argv[]){
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     //<NUM PARTICLES> <SIZE> <NUM STEPS> <chkFreq> <humanOutput> <inputFile>
+    double start, end;
+    start = MPI_Wtime();
     int* data = calloc(argc - 1, sizeof(int));
     int i;
     for(i = 1; i < argc; ++i){
@@ -32,9 +34,12 @@ int main(int argc, char* argv[]){
     // //     printState(st, ctx);
     runSystem(st, ctx);
     MPI_Barrier(MPI_COMM_WORLD);
+    end = MPI_Wtime();
+    st->simTime = end - start;
     printSimulationResults(st, ctx);
     MPI_Barrier(MPI_COMM_WORLD);
     destroyState(&st, ctx);
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     exit(0);
 }

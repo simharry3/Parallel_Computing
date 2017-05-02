@@ -1,8 +1,6 @@
 #include "operations.h"
 #include <mpi.h>
 
-
-
 void stepSystem(state* st, context* ctx){
     // printf("STEP %u\n", st->simSteps);
     fflush(NULL);
@@ -58,7 +56,10 @@ void runSystem(state* st, context* ctx){
 
 
 void printSimulationResults(state* st, context* ctx){
-        printf("Simulation finished in %u steps\n", st->simSteps);
+        if(ctx->rank == 0){
+            printf("%u %f\n", st->simSteps, st->simTime);
+            fflush(NULL);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
         printState(st, ctx);
-        fflush(NULL);
 }

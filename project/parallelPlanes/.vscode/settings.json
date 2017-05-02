@@ -3,6 +3,7 @@
     "files.associations": {
         "*.cl": "c",
         "limits": "cpp",
-        "array": "cpp"
+        "array": "cpp",
+        "initializer_list": "cpp"
     }
 }

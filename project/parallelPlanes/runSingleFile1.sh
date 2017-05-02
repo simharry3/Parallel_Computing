@@ -14,4 +14,4 @@
 #CHANGE THESE EVERY RUN:
 
 #################################
-srun -n $1 ./simulation.xl $2 $3 $4 $5 $6
+srun -n $1 ./simulation.xl $2 $3 $4 $5 $6 test1

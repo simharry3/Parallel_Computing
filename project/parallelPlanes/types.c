@@ -272,7 +272,6 @@ void initAggregators(state* st, context* ctx, char* agFile){
 void printState(state* st, context* ctx){
    int* pos = calloc(3, sizeof(int));
     for(int i = 1; i < ctx->planesPerRank + 1; ++i){
-        // printf("%d\n", i);
         for(int j = 0; j < ctx->max[0] * ctx->max[1]; ++j){
             if(st->universe[i][j] < EMPTY_CELL){
                 pos[0] = j % ctx->max[0];

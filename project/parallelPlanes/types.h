@@ -39,6 +39,7 @@ typedef struct state{
     uint activeParticles;
     uint collidedParticles;
     uint simSteps;
+    double simTime;
 
     int** universe;
     //ADD STATE
