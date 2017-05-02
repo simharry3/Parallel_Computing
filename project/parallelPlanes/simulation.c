@@ -37,6 +37,7 @@ int main(int argc, char* argv[]){
     end = MPI_Wtime();
     st->simTime = end - start;
     printSimulationResults(st, ctx);
+    sleep(10);
     MPI_Barrier(MPI_COMM_WORLD);
     destroyState(&st, ctx);
     MPI_Barrier(MPI_COMM_WORLD);

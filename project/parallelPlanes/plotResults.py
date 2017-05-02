@@ -46,7 +46,7 @@ for i in range(0, len(x)):
     if(cond[i] == -1):
         colorTag = colors["Aggregator"]
 
-    ax.scatter(xV,yV, zV, c=colorTag, marker='o', s=380, depthshade=True)
+    ax.scatter(xV,yV, zV, c=colorTag, marker='o', s=10, depthshade=True)
 
 patch = []
 for key in colors:
@@ -59,5 +59,5 @@ plt.title("Accumulation Structure of Full Diffusion Limited Aggregation Simulati
 ax.set_xlim3d([min(x) - 1,max(x) + 1])
 ax.set_ylim3d([min(y) - 1,max(y) + 1])
 ax.set_zlim3d([min(z) - 1,max(z) + 1])
-ax.view_init(elev=20, azim=225)
+ax.view_init(elev=25, azim=235)
 plt.show()
