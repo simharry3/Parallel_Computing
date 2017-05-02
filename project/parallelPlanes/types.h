@@ -11,7 +11,7 @@
 #define ACTIVE_PARTICLE 1
 #define AGGREGATOR_PARTICLE -1
 #define COLLIDED_PARTICLE -2
-#define CELL_MAX 9
+#define CELL_MAX 90
 
 typedef double real;
 

@@ -9,7 +9,7 @@
 
 #SBATCH -p small  
 #SBATCH -O
-#SBATCH -t 00:15:00
+#SBATCH -t 00:30:00
 #################################
 #CHANGE THESE EVERY RUN:
 

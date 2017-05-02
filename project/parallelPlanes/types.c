@@ -2,18 +2,26 @@
 #include <mpi.h>
 
 
+//===========================================
+//  This function initializes the particle in
+//  the grid structure
+//===========================================
 void initParticle(state* st, context* ctx, int* pos, int value){
-    // if(ctx->rank == 0){
-    //     printf("POS: %d\n", pos[2]);
-    //     fflush(NULL);
-    // }
     st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]] = value;
 }
 
+//===========================================
+//  This function checks to see if the movement
+//  of a particle will cause it to collide
+//===========================================
 int checkParticleCollision(state* st, context* ctx, int* pos){
     return  st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]];
 }
 
+//===========================================
+//  This funciton caps the position of a particle
+//  so that it does not escape our simulation bounds
+//===========================================
 void capPosition(context* ctx, int** pos){
     if((*pos)[0] > ctx->max[0] - 1){
         (*pos)[0] = ctx->max[0] - 1;
@@ -37,6 +45,13 @@ void capPosition(context* ctx, int** pos){
     }
 }
 
+//===========================================
+//  our simulation is limited on the sides, 
+//  however can wrap around on the top and
+//  bottom for ease of programming. This function
+//  performs the calculation for wrapping the rank
+//  should it be at the top or bottom of our simulation
+//===========================================
 int wrapRank(state* st, context* ctx, int rankIn){
     if(rankIn > ctx->comm_size - 1){
         return 0;
@@ -47,9 +62,14 @@ int wrapRank(state* st, context* ctx, int rankIn){
     return rankIn;
 }
 
+//===========================================
+//  This is the function that updates the ghost
+//  rows in the simulation. 
+//===========================================
 void updateGhostRows(state* st, context* ctx){
     MPI_Request send1, send2;
     MPI_Request recv1, recv2;
+    MPI_Status status1, status2;
     size_t plane = ctx->max[0] * ctx->max[1];
     int* buff1 = calloc(plane, sizeof(int));
     int* buff2 = calloc(plane, sizeof(int));
@@ -57,15 +77,18 @@ void updateGhostRows(state* st, context* ctx){
     // printf("RANK %d FORWARD RANK: %d BACKWARD RANK: %d \n",
     //         ctx->rank, wrapRank(st, ctx, ctx->rank  + 1), wrapRank(st, ctx, ctx->rank - 1));
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Isend((st->universe[0]), ctx->max[0] * ctx->max[1], 
+    MPI_Isend((st->universe[0]), plane, 
             MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 123, MPI_COMM_WORLD, &send1);
-    MPI_Isend((st->universe[ctx->planesPerRank + 1]), ctx->max[0] * ctx->max[1], 
+    MPI_Isend((st->universe[ctx->planesPerRank + 1]), plane, 
             MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 124, MPI_COMM_WORLD, &send2);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Irecv(buff1, ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 124, MPI_COMM_WORLD, &recv1);
-    MPI_Irecv(buff2, ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 123, MPI_COMM_WORLD, &recv2);
+    //Another issue that took a while to debug... We weren't blocking on recv
+    //so access to buffx would occationally occur before it was ready.
+    //MAKE SURE YOU ARE DONE READING TO BUFFER BEFORE USE.
+    MPI_Recv(buff1, plane, 
+            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 124, MPI_COMM_WORLD, &status1);
+    MPI_Recv(buff2, plane, 
+            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 123, MPI_COMM_WORLD, &status2);
     MPI_Barrier(MPI_COMM_WORLD);
     // printf("=============================\n");
     for(int i = 0; i < ctx->max[0] * ctx->max[1]; ++i){
@@ -80,14 +103,18 @@ void updateGhostRows(state* st, context* ctx){
         st->universe[0][i] = EMPTY_CELL;
         st->universe[ctx->planesPerRank + 1][i] = EMPTY_CELL;
     }
-    // MPI_Barrier(MPI_COMM_WORLD);
+    
+    //Not freeing these was causing a HUGE memory leak:
     free(buff1);
     free(buff2);
-    // buff1 = NULL;
-    // buff2 = NULL;
-    // printf("\n=============================\n");
 }
 
+
+//===========================================
+//  Main workhorse of the simulation. Scans through
+//  the entire plane, moving each particle it encounters
+//  that isn't an aggregator or collided particle
+//===========================================
 void updateParticlePositions(state* st, context* ctx){
     int num;
     int* d = calloc(3, sizeof(int));
@@ -177,6 +204,9 @@ void updateParticlePositions(state* st, context* ctx){
     // sleep(1);
 }
 
+//===========================================
+//  This function initializes the context struct
+//===========================================
 void initContext(context** ctx, int* data){
     *ctx = calloc(1, sizeof(context));
 
@@ -194,6 +224,10 @@ void initContext(context** ctx, int* data){
     
 }
 
+
+//===========================================
+//  This function initializes the state struct
+//=========================================== 
 void initState(state** st, context* ctx){
     *st = calloc(1, sizeof(state));
     int* pos = (int*)calloc(3, sizeof(int));
@@ -239,6 +273,9 @@ void initState(state** st, context* ctx){
 
 
 
+//===========================================
+//  This function destroys the state struct
+//===========================================
 void destroyState(state** st, context* ctx){
     for(int i = 0; i < ctx->planesPerRank + 2; ++i){
         free((*st)->universe[i]);
@@ -251,7 +288,10 @@ void destroyState(state** st, context* ctx){
 
 
 
-
+//===========================================
+//  This function initializes the aggregator
+//  particles on the grid
+//===========================================
 void initAggregators(state* st, context* ctx, char* agFile){
     
     // if(my_rank == 0)
@@ -278,6 +318,10 @@ void initAggregators(state* st, context* ctx, char* agFile){
 
 
 
+//===========================================
+//  This function outputs pretty values that
+//  are formatted correctly for pyplot to read
+//===========================================
 void printState(state* st, context* ctx){
    int* pos = calloc(3, sizeof(int));
     for(int i = 1; i < ctx->planesPerRank + 1; ++i){
