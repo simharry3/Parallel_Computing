@@ -27,9 +27,9 @@ void runSystem(state* st, context* ctx){
         }
     }
     else{
+
+        MPI_Request request, request2;
         while(cont > 0){
-            MPI_Request request, request2;
-            fflush(NULL);
             stepSystem(st, ctx);
             ++st->simSteps;
 
@@ -42,23 +42,18 @@ void runSystem(state* st, context* ctx){
                 temp = 0;
             }
             for(int i = 0; i < ctx->comm_size; i++){
-                // printf("SENDING %d\n", i);
-                // fflush(NULL);
                 MPI_Isend(&temp, 1, MPI_INT, i, 234, MPI_COMM_WORLD, &request2);
             }
             MPI_Barrier(MPI_COMM_WORLD);
             int tval = 0;
             for(int i = 0; i < ctx->comm_size; i++){
-                // printf("RECEIVING %d\n", i);
-                // fflush(NULL);
                 MPI_Irecv(&cont, 1, MPI_INT, i, 234, MPI_COMM_WORLD, &request);
                 tval += cont;
             }
             cont = tval;
-            // printf("POOOORKKKKDDDD <<<<<<<<<< %d\n", cont);
         }
     }
-    //MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 
@@ -70,4 +65,5 @@ void printSimulationResults(state* st, context* ctx){
         }
         MPI_Barrier(MPI_COMM_WORLD);
         printState(st, ctx);
+        MPI_Barrier(MPI_COMM_WORLD);
 }
