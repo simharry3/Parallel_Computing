@@ -71,10 +71,10 @@ void updateGhostRows(state* st, context* ctx){
     for(int i = 0; i < ctx->max[0] * ctx->max[1]; ++i){
         // printf("%d ", buff1[i]);
         if(st->universe[1][i] >= EMPTY_CELL){
-            st->universe[1][i] += buff2[i];
+            st->universe[1][i] += buff1[i];
         }
         if(st->universe[ctx->planesPerRank][i] >= EMPTY_CELL){
-            st->universe[ctx->planesPerRank][i] += buff1[i];
+            st->universe[ctx->planesPerRank][i] += buff2[i];
         }
 
         st->universe[0][i] = EMPTY_CELL;
