@@ -50,6 +50,7 @@ int wrapRank(state* st, context* ctx, int rankIn){
 void updateGhostRows(state* st, context* ctx){
     MPI_Request send1, send2;
     MPI_Request recv1, recv2;
+    MPI_Status status1, status2;
     size_t plane = ctx->max[0] * ctx->max[1];
     int* buff1 = calloc(plane, sizeof(int));
     int* buff2 = calloc(plane, sizeof(int));
@@ -57,24 +58,24 @@ void updateGhostRows(state* st, context* ctx){
     // printf("RANK %d FORWARD RANK: %d BACKWARD RANK: %d \n",
     //         ctx->rank, wrapRank(st, ctx, ctx->rank  + 1), wrapRank(st, ctx, ctx->rank - 1));
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Isend((st->universe[0]), ctx->max[0] * ctx->max[1], 
+    MPI_Isend((st->universe[0]), plane, 
             MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 123, MPI_COMM_WORLD, &send1);
-    MPI_Isend((st->universe[ctx->planesPerRank + 1]), ctx->max[0] * ctx->max[1], 
+    MPI_Isend((st->universe[ctx->planesPerRank + 1]), plane, 
             MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 124, MPI_COMM_WORLD, &send2);
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Irecv(buff1, ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 124, MPI_COMM_WORLD, &recv1);
-    MPI_Irecv(buff2, ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 123, MPI_COMM_WORLD, &recv2);
+    MPI_Recv(buff1, plane, 
+            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 124, MPI_COMM_WORLD, &status1);
+    MPI_Recv(buff2, plane, 
+            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 123, MPI_COMM_WORLD, &status2);
     MPI_Barrier(MPI_COMM_WORLD);
     // printf("=============================\n");
     for(int i = 0; i < ctx->max[0] * ctx->max[1]; ++i){
         // printf("%d ", buff1[i]);
         if(st->universe[1][i] >= EMPTY_CELL){
-            st->universe[1][i] += buff1[i];
+            st->universe[1][i] += buff2[i];
         }
         if(st->universe[ctx->planesPerRank][i] >= EMPTY_CELL){
-            st->universe[ctx->planesPerRank][i] += buff2[i];
+            st->universe[ctx->planesPerRank][i] += buff1[i];
         }
 
         st->universe[0][i] = EMPTY_CELL;

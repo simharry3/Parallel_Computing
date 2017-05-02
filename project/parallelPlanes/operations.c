@@ -4,7 +4,7 @@
 
 void stepSystem(state* st, context* ctx){
     // printf("STEP %u\n", st->simSteps);
-    fflush(NULL);
+    // fflush(NULL);
     updateParticlePositions(st, ctx);
 
 }
@@ -19,11 +19,10 @@ void runSystem(state* st, context* ctx){
     if(ctx->numSteps > 0){
     	int i;
         for(i = 0; i < ctx->numSteps; ++i){
+            //  printf("STEPS: %d\n", st->simSteps);
+            // fflush(NULL);
             stepSystem(st, ctx);
             ++st->simSteps;
-            // //printf("RUN SYSTEM STUCK HERE %d, %d RANK \n", i, mpi_rank);
-            // sleep(1);
-            fflush(NULL);
         }
     }
     else{
