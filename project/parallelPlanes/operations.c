@@ -2,10 +2,6 @@
 #include <mpi.h>
 
 
-int cont = 1;
-int temp = 1;
-
-
 void stepSystem(state* st, context* ctx){
     // printf("STEP %u\n", st->simSteps);
     fflush(NULL);
@@ -16,6 +12,8 @@ void stepSystem(state* st, context* ctx){
 
 
 void runSystem(state* st, context* ctx){
+    int cont = 1;
+    int temp = 1;
     MPI_Barrier(MPI_COMM_WORLD);
     //printf("%d\n", st->activeParticles);
     if(ctx->numSteps > 0){
@@ -29,24 +27,35 @@ void runSystem(state* st, context* ctx){
         }
     }
     else{
-        while(cont == 1){
+        while(cont > 0){
             MPI_Request request, request2;
             fflush(NULL);
             stepSystem(st, ctx);
             ++st->simSteps;
-            if(st->simSteps % ctx->chkFreq == 0){
-                // if(ctx->rank == 0){
-                // }
-            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
             cont = 0;
             if(st->activeParticles > 0){
-                for(int i = 0; i < ctx->comm_size; i++){
-                    MPI_Isend(&temp, 1, MPI_INT, i, 234, MPI_COMM_WORLD, &request2);
-                }
+                temp = 1;
+            }
+            else{
+                temp = 0;
+            }
+            for(int i = 0; i < ctx->comm_size; i++){
+                // printf("SENDING %d\n", i);
+                // fflush(NULL);
+                MPI_Isend(&temp, 1, MPI_INT, i, 234, MPI_COMM_WORLD, &request2);
             }
             MPI_Barrier(MPI_COMM_WORLD);
-            MPI_Irecv(&cont, 1, MPI_INT, MPI_ANY_SOURCE, 234, MPI_COMM_WORLD, &request);
-
+            int tval = 0;
+            for(int i = 0; i < ctx->comm_size; i++){
+                // printf("RECEIVING %d\n", i);
+                // fflush(NULL);
+                MPI_Irecv(&cont, 1, MPI_INT, i, 234, MPI_COMM_WORLD, &request);
+                tval += cont;
+            }
+            cont = tval;
+            // printf("POOOORKKKKDDDD <<<<<<<<<< %d\n", cont);
         }
     }
     //MPI_Barrier(MPI_COMM_WORLD);

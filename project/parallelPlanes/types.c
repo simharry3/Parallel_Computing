@@ -50,21 +50,23 @@ int wrapRank(state* st, context* ctx, int rankIn){
 void updateGhostRows(state* st, context* ctx){
     MPI_Request send1, send2;
     MPI_Request recv1, recv2;
-    int* buff1 = calloc(ctx->max[0] * ctx->max[1], sizeof(int));
-    int* buff2 = calloc(ctx->max[0] * ctx->max[1], sizeof(int));
+    size_t plane = ctx->max[0] * ctx->max[1];
+    int* buff1 = calloc(plane, sizeof(int));
+    int* buff2 = calloc(plane, sizeof(int));
 
     // printf("RANK %d FORWARD RANK: %d BACKWARD RANK: %d \n",
     //         ctx->rank, wrapRank(st, ctx, ctx->rank  + 1), wrapRank(st, ctx, ctx->rank - 1));
-
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Isend((st->universe[0]), ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 1, MPI_COMM_WORLD, &send1);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 123, MPI_COMM_WORLD, &send1);
     MPI_Isend((st->universe[ctx->planesPerRank + 1]), ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &send2);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 124, MPI_COMM_WORLD, &send2);
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Irecv(buff1, ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 1, MPI_COMM_WORLD, &recv1);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  - 1), 124, MPI_COMM_WORLD, &recv1);
     MPI_Irecv(buff2, ctx->max[0] * ctx->max[1], 
-            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 1, MPI_COMM_WORLD, &recv2);
+            MPI_INT, wrapRank(st, ctx, ctx->rank  + 1), 123, MPI_COMM_WORLD, &recv2);
+    MPI_Barrier(MPI_COMM_WORLD);
     // printf("=============================\n");
     for(int i = 0; i < ctx->max[0] * ctx->max[1]; ++i){
         // printf("%d ", buff1[i]);
@@ -78,8 +80,11 @@ void updateGhostRows(state* st, context* ctx){
         st->universe[0][i] = EMPTY_CELL;
         st->universe[ctx->planesPerRank + 1][i] = EMPTY_CELL;
     }
+    // MPI_Barrier(MPI_COMM_WORLD);
     free(buff1);
     free(buff2);
+    // buff1 = NULL;
+    // buff2 = NULL;
     // printf("\n=============================\n");
 }
 
@@ -132,12 +137,12 @@ void updateParticlePositions(state* st, context* ctx){
                     pos[2] += d[2];
                     capPosition(ctx, &pos);
                     int checkedValue = checkParticleCollision(st, ctx, pos);
-                    if(checkedValue == AGGREGATOR_PARTICLE || checkedValue == COLLIDED_PARTICLE){
+                    if(checkedValue < EMPTY_CELL){
                         st->universe[i][j] = COLLIDED_PARTICLE;
                         // printf("HERE<<<<<<<<<<<<<<<<<<<<<<<\n");
                         fflush(NULL);
                     }
-                    else if(checkedValue < ACTIVE_PARTICLE + CELL_MAX){
+                    else if(checkedValue >= EMPTY_CELL && checkedValue < CELL_MAX){
                         moveList = realloc(moveList, (movedParticles + 1) * sizeof(int*));
                         moveList[movedParticles] = calloc(4, sizeof(int));
 
@@ -197,10 +202,11 @@ void initState(state** st, context* ctx){
 
     //We use a double pointer that is a representation of planes of our simulation. This is a compromise for 
     //Memory conservation's sake:
+    size_t plane = ctx->max[0] * ctx->max[1];
     (*st)->universe = malloc((ctx->planesPerRank + 2) * sizeof(int*));
     for(int i = 0; i < ctx->planesPerRank + 2; ++i){
-        (*st)->universe[i] = calloc(ctx->max[0] * ctx->max[1], sizeof(int));
-        memset((*st)->universe[i], EMPTY_CELL, ctx->max[0] * ctx->max[1] * sizeof(int));
+        (*st)->universe[i] = calloc(plane, sizeof(int));
+        memset((*st)->universe[i], EMPTY_CELL, plane * sizeof(int));
     }
 
     int i;
@@ -281,7 +287,7 @@ void printState(state* st, context* ctx){
             if(st->universe[i][j] < EMPTY_CELL){
                 pos[0] = j % ctx->max[0];
                 pos[1] =  (j - pos[0]) / ctx->max[1];
-                pos[2] = ctx->rank * ctx->planesPerRank + i;
+                pos[2] = (ctx->rank / ctx->planesPerRank) + i;
                 printf("%d %d %d %d\n", pos[0], pos[1], pos[2], st->universe[i][j]);
                 fflush(NULL);
             }
