@@ -187,8 +187,6 @@ void initContext(context** ctx, int* data){
     (*ctx)->numParticles = data[0];
     (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = data[1];
     (*ctx)->numSteps = data[2];
-    (*ctx)->chkFreq = data[3];
-    (*ctx)->humanOutput = data[4];
     
 
     (*ctx)->planesPerRank = (*ctx)->max[2]/(*ctx)->comm_size;
