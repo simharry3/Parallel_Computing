@@ -21,7 +21,9 @@ cond = []
 
 conditions = {"Collided", "Active", "Aggregator"}
 colors = {"Collided":"b", "Active":"0.5", "Aggregator":"r"}
-
+ln = g.readline().split(' ')
+time = float(ln[1])
+steps = float(ln[0])
 for line in g:
  ln = line.split(' ')
  x.append(int(ln[0]))
@@ -29,6 +31,7 @@ for line in g:
  z.append(int(ln[2]))
  cond.append(int(ln[3]))
 
+print "NUM PARTICLES: " + str(len(x))
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 

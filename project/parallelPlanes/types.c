@@ -78,6 +78,8 @@ void updateGhostRows(state* st, context* ctx){
         st->universe[0][i] = EMPTY_CELL;
         st->universe[ctx->planesPerRank + 1][i] = EMPTY_CELL;
     }
+    free(buff1);
+    free(buff2);
     // printf("\n=============================\n");
 }
 
@@ -136,7 +138,7 @@ void updateParticlePositions(state* st, context* ctx){
                         fflush(NULL);
                     }
                     else if(checkedValue < ACTIVE_PARTICLE + CELL_MAX){
-                        moveList = (int**)realloc(moveList, (movedParticles + 1) * sizeof(int*));
+                        moveList = realloc(moveList, (movedParticles + 1) * sizeof(int*));
                         moveList[movedParticles] = calloc(4, sizeof(int));
 
                         for(int k = 0; k < 3; ++k){
@@ -226,6 +228,7 @@ void initState(state** st, context* ctx){
     //  printf("PPR: %u\n", (*st)->activeParticles);
     (*st)->collidedParticles = 0;
     (*st)->simSteps = 0;
+    st = NULL;
     free(pos);
     //printState(*st, ctx);
 }
@@ -260,6 +263,8 @@ void initAggregators(state* st, context* ctx, char* agFile){
         }
         // ++st->collidedParticles;
     }
+    fclose(fp);
+    fp = NULL;
     free(pos);
     free(buff);
 
