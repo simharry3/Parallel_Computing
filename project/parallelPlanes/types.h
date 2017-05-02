@@ -19,14 +19,6 @@ typedef struct vec3D{
     int x, y, z;
 }vec3D;
 
-typedef struct particle{
-    int x;
-    int y;
-    int z;
-    int id;
-    int collision;
-    //ADD PARTICLE 
-}particle;
 
 typedef struct context{
     uint numParticles;
@@ -47,18 +39,13 @@ typedef struct state{
     uint activeParticles;
     uint collidedParticles;
     uint simSteps;
-    
-    particle* ptab;
-    particle* ctab;
 
     int** universe;
     //ADD STATE
 }state;
 
 void initParticle(state* st, context* ctx, int* pos, int value);
-void printParticle(particle* p, int readability);
 void updateParticlePositions(state* st, context* ctx);
-void updateCollision(particle* cols, state* st, MPI_Datatype particle, context* ctx);
 void initAggregators(state* st, context* ctx, char* agFile);
 void initContext(context** ctx, int* data);
 void initState(state** st, context* ctx);

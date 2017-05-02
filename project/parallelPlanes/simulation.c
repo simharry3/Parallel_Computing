@@ -15,7 +15,7 @@ int main(int argc, char* argv[]){
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_commsize);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    //<NUM PARTICLES> <NUM STEPS> <chkFreq> <humanOutput> <inputFile>
+    //<NUM PARTICLES> <SIZE> <NUM STEPS> <chkFreq> <humanOutput> <inputFile>
     int* data = calloc(argc - 1, sizeof(int));
     int i;
     for(i = 1; i < argc; ++i){

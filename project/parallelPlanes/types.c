@@ -1,11 +1,6 @@
 #include <types.h>
 #include <mpi.h>
 
-int rank;
-int numParts;
-int temp = -1;
-
-
 
 void initParticle(state* st, context* ctx, int* pos, int value){
     // if(ctx->rank == 0){
@@ -15,52 +10,8 @@ void initParticle(state* st, context* ctx, int* pos, int value){
     st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]] = value;
 }
 
-
-
-void printParticle(particle* p, int readability){
-    if(readability == 1){
-        printf("Particle %d: (%d, %d, %d) C: %d\n", p->id+(numParts*rank), p->x, 
-                                     p->y, p->z, p->collision);
-    }
-    else{  
-        printf("%d %d %d %d %d\n", p->id+(numParts*rank), p->collision, p->x, 
-                                     p->y, p->z);
-    }
-    fflush(NULL);
-}
-
-
-
-//check if two particles have the same location:
-int checkLocations(particle* p1, particle* p2){
-    return p1->x == p2->x &&
-            p1->y == p2->y &&
-            p1->z == p2->z;
-}
-
-
-
 int checkParticleCollision(state* st, context* ctx, int* pos){
     return  st->universe[pos[2]][pos[1] * ctx->max[0] + pos[0]];
-}
-
-
-
-void updateCollision(particle* cols, state* st, MPI_Datatype particle, context* ctx){
-    MPI_Request request;
-    // Currently set to always to rank 0 collision table.. in the future it
-    // should run through all collions tables calls.. somehow.
-    
-    MPI_Irecv(&temp, 1, MPI_INT, MPI_ANY_SOURCE, 124, MPI_COMM_WORLD, &request);
-   
-    //st->ctab = realloc(st->ctab, st->collidedParticles * sizeof(particle));
-    //MPI_Irecv(st->ctab, st->collidedParticles, particle, MPI_ANY_SOURCE, 123, MPI_COMM_WORLD, &request); 
-    printf("\nAFTER RECEIVED !!!\n");
-    printf("PRINTING COLLISION TABLE PASSED ON %d   \n", temp);
-    printState(st, ctx);
-    fflush(NULL);
-
- 
 }
 
 void capPosition(context* ctx, int** pos){
@@ -86,9 +37,6 @@ void capPosition(context* ctx, int** pos){
     }
 }
 
-
-
-
 int wrapRank(state* st, context* ctx, int rankIn){
     if(rankIn > ctx->comm_size - 1){
         return 0;
@@ -98,10 +46,6 @@ int wrapRank(state* st, context* ctx, int rankIn){
     }
     return rankIn;
 }
-
-
-
-
 
 void updateGhostRows(state* st, context* ctx){
     MPI_Request send1, send2;
@@ -137,11 +81,7 @@ void updateGhostRows(state* st, context* ctx){
     // printf("\n=============================\n");
 }
 
-
-
-
 void updateParticlePositions(state* st, context* ctx){
-    MPI_Request request;
     int num;
     int* d = calloc(3, sizeof(int));
     d[0] = d[1] = d[2] = 0;
@@ -210,8 +150,6 @@ void updateParticlePositions(state* st, context* ctx){
                     }
                 }
             }
-            // CHECK NEIGHBORS
-            // MOVE PARTICLE
         }
     }
 
@@ -232,9 +170,6 @@ void updateParticlePositions(state* st, context* ctx){
     // sleep(1);
 }
 
-
-
-
 void initContext(context** ctx, int* data){
     *ctx = calloc(1, sizeof(context));
 
@@ -243,12 +178,10 @@ void initContext(context** ctx, int* data){
 
     (*ctx)->max = calloc(3, sizeof(int));
     (*ctx)->numParticles = data[0];
-
-    (*ctx)->numSteps = data[1];
-    (*ctx)->chkFreq = data[2];
-    (*ctx)->humanOutput = data[3];
-
-    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = 16;
+    (*ctx)->max[0] = (*ctx)->max[1] = (*ctx)->max[2] = data[1];
+    (*ctx)->numSteps = data[2];
+    (*ctx)->chkFreq = data[3];
+    (*ctx)->humanOutput = data[4];
     
 
     (*ctx)->planesPerRank = (*ctx)->max[2]/(*ctx)->comm_size;
@@ -256,29 +189,16 @@ void initContext(context** ctx, int* data){
     
 }
 
-
-
 void initState(state** st, context* ctx){
     *st = calloc(1, sizeof(state));
     int* pos = (int*)calloc(3, sizeof(int));
-    
-    size_t planeMalloc = ctx->planesPerRank * sizeof(int*);
-    size_t innerPlaneMalloc = ctx->max[0]  * ctx->max[1] * sizeof(int);
-    if(ctx->rank == 0){
-        // printf("Beginning allocation of %u planes of size %zu\n", ctx->planesPerRank, innerPlaneMalloc);
-        // fflush(NULL);
-    }
+
     //We use a double pointer that is a representation of planes of our simulation. This is a compromise for 
     //Memory conservation's sake:
     (*st)->universe = malloc((ctx->planesPerRank + 2) * sizeof(int*));
     for(int i = 0; i < ctx->planesPerRank + 2; ++i){
         (*st)->universe[i] = calloc(ctx->max[0] * ctx->max[1], sizeof(int));
         memset((*st)->universe[i], EMPTY_CELL, ctx->max[0] * ctx->max[1] * sizeof(int));
-    }
-
-    if(ctx->rank == 0){
-        // printf("ALLOCATION COMPLETE\n");
-        // fflush(NULL);
     }
 
     int i;
@@ -335,8 +255,6 @@ void initAggregators(state* st, context* ctx, char* agFile){
     FILE* fp;
     fp = fopen(agFile, "r");
     while(fscanf(fp, "%d %d %d", &pos[0], &pos[1], &pos[2]) != EOF){
-        pos[2];
-        st->ctab = realloc(st->ctab, (st->collidedParticles + 1) * sizeof(particle));
         if(ctx->rank == pos[2]/ctx->planesPerRank){
             initParticle(st, ctx, pos, AGGREGATOR_PARTICLE);
         }

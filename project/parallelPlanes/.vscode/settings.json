@@ -1,0 +1,8 @@
+{
+    "python.linting.pylintEnabled": false,
+    "files.associations": {
+        "*.cl": "c",
+        "limits": "cpp",
+        "array": "cpp"
+    }
+}

@@ -37,10 +37,10 @@ for i in range(0, len(x)):
     yV = y[i]
     zV = z[i]
     colorTag = colors["Active"]
-    if(cond[i] == 10):
+    if(cond[i] == -2):
         colorTag = colors["Collided"]
 
-    if(cond[i] == 9):
+    if(cond[i] == -1):
         colorTag = colors["Aggregator"]
 
     ax.scatter(xV,yV, zV, c=colorTag, marker='o', s=380, depthshade=True)
